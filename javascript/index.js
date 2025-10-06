@@ -1,4 +1,5 @@
 import { Go2WebRTC } from "./go2webrtc.js";
+import { SPORT_CMD } from "./constants.js";
 
 // Function to log messages to the console and the log window
 function logMessage(text) {
@@ -41,20 +42,62 @@ function saveValuesToLocalStorage() {
 
 // Function to handle connect button click
 function handleConnectClick() {
-  // You can add connection logic here
-  // For now, let's just log the values
   const token = document.getElementById("token").value;
   const robotIP = document.getElementById("robot-ip").value;
+  const connectBtn = document.getElementById("connect-btn");
+  
+  if (!robotIP) {
+    logMessage("❌ Please enter robot IP address");
+    return;
+  }
 
   console.log("Token:", token);
   console.log("Robot IP:", robotIP);
-  logMessage(`Connecting to robot on ip ${robotIP}...`);
+  
+  connectBtn.innerHTML = "🔄 Connecting...";
+  connectBtn.disabled = true;
+  
+  logMessage(`🚀 Connecting to robot at ${robotIP}...`);
 
   // Save the values to localStorage
   saveValuesToLocalStorage();
 
-  // Initialize RTC
-  globalThis.rtc = new Go2WebRTC(token, robotIP);
+  // Initialize RTC with callback
+  globalThis.rtc = new Go2WebRTC(token, robotIP, (data) => {
+    if (data.type === 'validation' && data.data === 'Validation Ok.') {
+      connectBtn.innerHTML = "✅ Connected to Robot";
+      connectBtn.disabled = false;
+      updateConnectionStatus(true);
+      logMessage(`✅ Successfully connected to GO2!`);
+      
+      // Ensure video element is ready
+      const videoElement = document.getElementById("video-frame");
+      if (videoElement && globalThis.rtc && globalThis.rtc.VidTrackEvent) {
+        videoElement.srcObject = globalThis.rtc.VidTrackEvent.streams[0];
+        videoElement.play().catch(e => console.log('Video autoplay prevented:', e));
+      }
+    }
+  });
+  
+  // Set up connection state monitoring
+  globalThis.rtc.pc.onconnectionstatechange = () => {
+    const state = globalThis.rtc.pc.connectionState;
+    logMessage(`Connection state: ${state}`);
+    
+    if (state === 'connected') {
+      connectBtn.innerHTML = "✅ Connected to Robot";
+      connectBtn.disabled = false;
+      updateConnectionStatus(true);
+    } else if (state === 'failed' || state === 'disconnected') {
+      connectBtn.innerHTML = "❌ Connection Failed";
+      setTimeout(() => {
+        connectBtn.innerHTML = "🔗 Connect to Robot";
+        connectBtn.disabled = false;
+      }, 3000);
+      updateConnectionStatus(false);
+    }
+  };
+  
   globalThis.rtc.initSDP();
 }
 
@@ -97,37 +140,43 @@ function applyGamePadDeadzeone(value, th) {
   return Math.abs(value) > th ? value : 0
 }
 
-function joystickTick(joyLeft, joyRight) {
-  let x,y,z = 0;
-  let gpToUse = document.getElementById("gamepad").value;
-  if (gpToUse !== "NO") {
-    const gamepads = navigator.getGamepads();
-    let gp = gamepads[gpToUse];
+let gamepadInterval = null;
+
+function startGamepadControl() {
+  if (gamepadInterval) return;
+  
+  gamepadInterval = setInterval(() => {
+    const gpToUse = document.getElementById("gamepad")?.value;
+    if (!gpToUse || gpToUse === "NO" || !globalThis.rtc) return;
     
-    // LB must be pressed
-    if (gp.buttons[4].pressed == true) {
-      x = -1 * applyGamePadDeadzeone(gp.axes[1], 0.25);
-      y = -1 * applyGamePadDeadzeone(gp.axes[2], 0.25);
-      z = -1 * applyGamePadDeadzeone(gp.axes[0], 0.25);
-    } 
-  } else {
-     y = -1 * (joyRight.GetPosX() - 100) / 50;
-     x = -1 * (joyLeft.GetPosY() - 100) / 50;
-     z = -1 * (joyLeft.GetPosX() - 100) / 50;
+    const gamepads = navigator.getGamepads();
+    const gp = gamepads[gpToUse];
+    
+    if (!gp) return;
+    
+    // LB must be pressed (button 4)
+    if (gp.buttons[4] && gp.buttons[4].pressed) {
+      const x = -1 * applyGamePadDeadzeone(gp.axes[1], 0.25); // Left stick Y
+      const y = -1 * applyGamePadDeadzeone(gp.axes[0], 0.25); // Left stick X  
+      const z = -1 * applyGamePadDeadzeone(gp.axes[2], 0.25); // Right stick X
+      
+      if (x !== 0 || y !== 0 || z !== 0) {
+        globalThis.rtc.publishApi("rt/api/sport/request", 1008, JSON.stringify({x: x * 0.8, y: y * 0.6, z: z * 1.5}));
+      }
+    }
+  }, 50);
+}
+
+function stopGamepadControl() {
+  if (gamepadInterval) {
+    clearInterval(gamepadInterval);
+    gamepadInterval = null;
   }
+}
 
-  if (x === 0 && y === 0 && z === 0) {
-    return;
-  }
-
-  if (x == undefined || y == undefined || z == undefined) {
-    return;
-  }
-
-  console.log("Joystick Linear:", x, y, z);
-
-  if(globalThis.rtc == undefined) return;
-  globalThis.rtc.publishApi("rt/api/sport/request", 1008, JSON.stringify({x: x, y: y, z: z}));
+function joystickTick(joyLeft, joyRight) {
+  // Disable joysticks to prevent spam
+  return;
 }
 
 function addJoysticks() {
@@ -145,24 +194,27 @@ function addJoysticks() {
 }
 
 const buildGamePadsSelect = (e) => {
-  const gp = navigator.getGamepads().filter(x => x != null && x.id.toLowerCase().indexOf("xbox") != -1);
-
+  const gamepads = navigator.getGamepads();
   const gamepadSelect = document.getElementById("gamepad");
+  if (!gamepadSelect) return;
+  
   gamepadSelect.innerHTML = "";
 
   const option = document.createElement("option");
   option.value = "NO";
-  option.textContent = "Don't use Gamepad"
+  option.textContent = "No Controller";
   option.selected = true;
   gamepadSelect.appendChild(option);  
 
-  Object.entries(gp).forEach(([index, value]) => {
-    if (!value) return
-    const option = document.createElement("option");
-    option.value = value.index;
-    option.textContent = value.id;
-    gamepadSelect.appendChild(option);
-  });
+  for (let i = 0; i < gamepads.length; i++) {
+    const gp = gamepads[i];
+    if (gp) {
+      const option = document.createElement("option");
+      option.value = i;
+      option.textContent = gp.id.substring(0, 30) + (gp.id.length > 30 ? '...' : '');
+      gamepadSelect.appendChild(option);
+    }
+  }
 };
 
 window.addEventListener("gamepadconnected", buildGamePadsSelect);
@@ -173,8 +225,20 @@ buildGamePadsSelect();
 document.addEventListener("DOMContentLoaded", loadSavedValues);
 document.addEventListener("DOMContentLoaded", addJoysticks);
 
-document.getElementById("gamepad").addEventListener("change", () => {
-//alert("change");
+// Setup gamepad change handler
+document.addEventListener("DOMContentLoaded", function() {
+  const gamepadSelect = document.getElementById("gamepad");
+  if (gamepadSelect) {
+    gamepadSelect.addEventListener("change", (e) => {
+      if (e.target.value !== "NO") {
+        startGamepadControl();
+        logMessage(`🎮 Xbox controller activated - Hold LB to move`);
+      } else {
+        stopGamepadControl();
+        logMessage(`🎮 Controller disabled`);
+      }
+    });
+  }
 });
 
 // Attach event listener to connect button
@@ -193,45 +257,56 @@ document
 
 
 
-  document.addEventListener('keydown', function(event) {
-    const key = event.key.toLowerCase();
-    let x = 0, y = 0, z = 0;
+// Keyboard controls
+document.addEventListener('keydown', function(event) {
+  // Don't trigger if typing in input fields
+  if (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA') {
+    return;
+  }
+  
+  const key = event.key.toLowerCase();
+  let x = 0, y = 0, z = 0;
 
-    switch (key) {
-        case 'w': // Forward
-            x = 0.8;
-            break;
-        case 's': // Reverse
-            x = -0.4;
-            break;
-        case 'a': // Sideways left
-            y = 0.4;
-            break;
-        case 'd': // Sideways right
-            y = -0.4;
-            break;
-        case 'q': // Turn left
-            z = 2;
-            break;
-        case 'e': // Turn right
-            z = -2;
-            break;
-        default:
-            return; // Ignore other keys
-    }
+  switch (key) {
+      case 'w': // Forward
+          x = 0.8;
+          break;
+      case 's': // Reverse
+          x = -0.4;
+          break;
+      case 'a': // Sideways left
+          y = 0.4;
+          break;
+      case 'd': // Sideways right
+          y = -0.4;
+          break;
+      case 'q': // Turn left
+          z = 2;
+          break;
+      case 'e': // Turn right
+          z = -2;
+          break;
+      default:
+          return; // Ignore other keys
+  }
 
-    if(globalThis.rtc !== undefined) {
-        globalThis.rtc.publishApi("rt/api/sport/request", 1008, JSON.stringify({x: x, y: y, z: z}));
-    }
+  if(globalThis.rtc !== undefined && globalThis.rtc.publishApi) {
+      globalThis.rtc.publishApi("rt/api/sport/request", 1008, JSON.stringify({x: x, y: y, z: z}));
+  }
 });
 
 document.addEventListener('keyup', function(event) {
-    const key = event.key.toLowerCase();
-    if (key === 'w' || key === 's' || key === 'a' || key === 'd' || key === 'q' || key === 'e') {
-        if(globalThis.rtc !== undefined) {
-            // Stop movement by sending zero velocity
-            globalThis.rtc.publishApi("rt/api/sport/request", 1008, JSON.stringify({x: 0, y: 0, z: 0}));
-        }
-    }
+  // Don't trigger if typing in input fields
+  if (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA') {
+    return;
+  }
+  
+  const key = event.key.toLowerCase();
+  if (key === 'w' || key === 's' || key === 'a' || key === 'd' || key === 'q' || key === 'e') {
+      if(globalThis.rtc !== undefined && globalThis.rtc.publishApi) {
+          // Stop movement by sending zero velocity
+          globalThis.rtc.publishApi("rt/api/sport/request", 1008, JSON.stringify({x: 0, y: 0, z: 0}));
+      }
+  }
 });
 
