@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
     <title>GO2 Robot Controller</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.10.0/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.2/dist/coco-ssd.min.js"></script>
     <style>
       * {
         margin: 0;
@@ -37,6 +39,37 @@
         height: 100%;
         object-fit: cover;
         background: #000;
+      }
+      
+      /* YOLO Detection Canvas */
+      #detection-canvas {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        z-index: 2;
+      }
+      
+      .detection-toggle {
+        position: absolute;
+        top: 80px;
+        right: 20px;
+        background: rgba(255,255,255,0.1);
+        backdrop-filter: blur(20px);
+        border: 1px solid rgba(255,255,255,0.2);
+        border-radius: 25px;
+        padding: 8px 16px;
+        color: #fff;
+        font-size: 12px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+      }
+      
+      .detection-toggle.active {
+        background: rgba(0,122,255,0.3);
+        border-color: rgba(0,122,255,0.5);
       }
       
       /* UI Overlay */
@@ -364,6 +397,7 @@
     <!-- Video Background -->
     <div class="video-background">
       <video id="video-frame" autoplay playsinline muted></video>
+      <canvas id="detection-canvas"></canvas>
     </div>
 
     <!-- UI Overlay -->
@@ -376,6 +410,9 @@
         </div>
         <button class="settings-btn" id="settings-toggle">⚙️</button>
       </div>
+      
+      <!-- YOLO Toggle -->
+      <button class="detection-toggle" id="yolo-toggle">🎯 YOLO OFF</button>
 
       <!-- Movement Controls -->
       <div class="control-panel movement-panel">
@@ -498,6 +535,100 @@
       }
 
       let moveInterval = null;
+      let yoloModel = null;
+      let yoloEnabled = false;
+      let detectionInterval = null;
+      
+      // Load YOLO model
+      async function loadYOLO() {
+        try {
+          yoloModel = await cocoSsd.load();
+          console.log('YOLO model loaded');
+        } catch (error) {
+          console.error('Failed to load YOLO model:', error);
+        }
+      }
+      
+      // Draw detection boxes
+      function drawDetections(predictions, canvas, video) {
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        predictions.forEach(prediction => {
+          const [x, y, width, height] = prediction.bbox;
+          const confidence = prediction.score.toFixed(2);
+          const label = prediction.class;
+          
+          // Draw bounding box
+          ctx.strokeStyle = '#00ff00';
+          ctx.lineWidth = 2;
+          ctx.strokeRect(x, y, width, height);
+          
+          // Draw label background
+          ctx.fillStyle = 'rgba(0, 255, 0, 0.8)';
+          ctx.fillRect(x, y - 25, ctx.measureText(`${label} ${confidence}`).width + 10, 25);
+          
+          // Draw label text
+          ctx.fillStyle = '#000';
+          ctx.font = '14px Inter';
+          ctx.fillText(`${label} ${confidence}`, x + 5, y - 8);
+        });
+      }
+      
+      // Run YOLO detection
+      async function runDetection() {
+        if (!yoloModel || !yoloEnabled) return;
+        
+        const video = document.getElementById('video-frame');
+        const canvas = document.getElementById('detection-canvas');
+        
+        if (video.videoWidth === 0 || video.videoHeight === 0) return;
+        
+        // Resize canvas to match video
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        
+        try {
+          const predictions = await yoloModel.detect(video);
+          drawDetections(predictions, canvas, video);
+        } catch (error) {
+          console.error('Detection error:', error);
+        }
+      }
+      
+      // Toggle YOLO detection
+      function toggleYOLO() {
+        const toggle = document.getElementById('yolo-toggle');
+        
+        if (!yoloModel) {
+          toggle.textContent = '🎯 Loading...';
+          loadYOLO().then(() => {
+            if (yoloModel) {
+              toggleYOLO();
+            }
+          });
+          return;
+        }
+        
+        yoloEnabled = !yoloEnabled;
+        
+        if (yoloEnabled) {
+          toggle.textContent = '🎯 YOLO ON';
+          toggle.classList.add('active');
+          detectionInterval = setInterval(runDetection, 200); // 5 FPS
+        } else {
+          toggle.textContent = '🎯 YOLO OFF';
+          toggle.classList.remove('active');
+          if (detectionInterval) {
+            clearInterval(detectionInterval);
+            detectionInterval = null;
+          }
+          // Clear canvas
+          const canvas = document.getElementById('detection-canvas');
+          const ctx = canvas.getContext('2d');
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+      }
       
       function startMove(direction) {
         if (!globalThis.rtc) return;
@@ -545,6 +676,7 @@
         const settingsToggle = document.getElementById('settings-toggle');
         const settingsPanel = document.getElementById('settings-panel');
         const settingsClose = document.getElementById('settings-close');
+        const yoloToggle = document.getElementById('yolo-toggle');
         
         settingsToggle.addEventListener('click', function() {
           settingsPanel.classList.add('open');
@@ -553,6 +685,12 @@
         settingsClose.addEventListener('click', function() {
           settingsPanel.classList.remove('open');
         });
+        
+        // YOLO toggle
+        yoloToggle.addEventListener('click', toggleYOLO);
+        
+        // Load YOLO model on startup
+        loadYOLO();
         
         // Close when clicking outside
         document.addEventListener('click', function(e) {
