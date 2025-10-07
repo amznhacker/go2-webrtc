@@ -9,14 +9,17 @@ import json
 import time
 
 def send_robot_command(robot_ip, x=0, y=0, z=0):
-    """Send movement command using same format as JavaScript"""
+    """Send movement command to robot via web interface"""
     try:
-        # Same format as working JavaScript WASD keys
-        url = f"http://{robot_ip}:8000/robot_command"  # We'll create this endpoint
-        data = {"x": x, "y": y, "z": z}
+        # Send to the same server that handles the web interface
+        url = f"http://localhost:8000/mouse_command"
+        data = {"x": x, "y": y, "z": z, "robot_ip": robot_ip}
         
         # For now, just print what we would send
-        print(f"🤖 Would send: x={x}, y={y}, z={z}")
+        print(f"🤖 Sending: x={x}, y={y}, z={z}")
+        
+        # TODO: Actually send HTTP request when we add the endpoint
+        # response = requests.post(url, json=data)
         return True
         
     except Exception as e:
