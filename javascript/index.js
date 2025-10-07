@@ -69,6 +69,9 @@ function handleConnectClick() {
       connectBtn.disabled = false;
       updateConnectionStatus(true);
       logMessage(`✅ Successfully connected to GO2!`);
+      logMessage(`🖱️ Mouse controls: Wheel=Forward/Back, Left/Right Click=Turn`);
+      logMessage(`⌨️ Keyboard: WASD=Move, QE=Turn`);
+      logMessage(`🎮 Xbox: Hold LB + sticks to move`);
       
       // Ensure video element is ready
       const videoElement = document.getElementById("video-frame");
@@ -256,6 +259,67 @@ document
 
 
 
+
+// Mouse wheel controls
+document.addEventListener('wheel', function(event) {
+  // Don't trigger if not connected
+  if (!globalThis.rtc || !globalThis.rtc.publishApi) return;
+  
+  event.preventDefault();
+  
+  if (event.deltaY < 0) {
+    // Scroll up - Forward
+    logMessage('🖱️ Mouse wheel up - Forward');
+    globalThis.rtc.publishApi("rt/api/sport/request", 1008, JSON.stringify({x: 0.6, y: 0, z: 0}));
+    setTimeout(() => {
+      if (globalThis.rtc && globalThis.rtc.publishApi) {
+        globalThis.rtc.publishApi("rt/api/sport/request", 1008, JSON.stringify({x: 0, y: 0, z: 0}));
+      }
+    }, 200);
+  } else if (event.deltaY > 0) {
+    // Scroll down - Backward
+    logMessage('🖱️ Mouse wheel down - Backward');
+    globalThis.rtc.publishApi("rt/api/sport/request", 1008, JSON.stringify({x: -0.4, y: 0, z: 0}));
+    setTimeout(() => {
+      if (globalThis.rtc && globalThis.rtc.publishApi) {
+        globalThis.rtc.publishApi("rt/api/sport/request", 1008, JSON.stringify({x: 0, y: 0, z: 0}));
+      }
+    }, 200);
+  }
+});
+
+// Mouse click controls
+document.addEventListener('mousedown', function(event) {
+  // Don't trigger if not connected or clicking on UI elements
+  if (!globalThis.rtc || !globalThis.rtc.publishApi) return;
+  if (event.target.tagName === 'INPUT' || event.target.tagName === 'BUTTON' || event.target.tagName === 'SELECT') return;
+  
+  if (event.button === 0) {
+    // Left click - Turn left
+    logMessage('🖱️ Left click - Turn left');
+    globalThis.rtc.publishApi("rt/api/sport/request", 1008, JSON.stringify({x: 0, y: 0, z: 1.5}));
+    setTimeout(() => {
+      if (globalThis.rtc && globalThis.rtc.publishApi) {
+        globalThis.rtc.publishApi("rt/api/sport/request", 1008, JSON.stringify({x: 0, y: 0, z: 0}));
+      }
+    }, 300);
+  } else if (event.button === 2) {
+    // Right click - Turn right
+    event.preventDefault();
+    logMessage('🖱️ Right click - Turn right');
+    globalThis.rtc.publishApi("rt/api/sport/request", 1008, JSON.stringify({x: 0, y: 0, z: -1.5}));
+    setTimeout(() => {
+      if (globalThis.rtc && globalThis.rtc.publishApi) {
+        globalThis.rtc.publishApi("rt/api/sport/request", 1008, JSON.stringify({x: 0, y: 0, z: 0}));
+      }
+    }, 300);
+  }
+});
+
+// Disable right-click context menu
+document.addEventListener('contextmenu', function(event) {
+  event.preventDefault();
+});
 
 // Keyboard controls
 document.addEventListener('keydown', function(event) {
