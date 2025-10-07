@@ -109,11 +109,23 @@ async def start_mouse_bridge(robot_conn):
     
     await robot_conn.connect_robot()
     
+    # Wait for data channel to be ready
+    while not robot_conn.data_channel or robot_conn.data_channel.readyState != "open":
+        print("⏳ Waiting for data channel...")
+        await asyncio.sleep(0.5)
+    
+    print("✅ Data channel ready!")
+    
     # Start mouse reading thread
     mouse_thread_handle = threading.Thread(target=mouse_thread, daemon=True)
     mouse_thread_handle.start()
     
     while True:
+        # Check if data channel is still open
+        if not robot_conn.data_channel or robot_conn.data_channel.readyState != "open":
+            print("❌ Data channel closed")
+            break
+            
         # Handle action commands
         if mouse_commands:
             cmd = mouse_commands.pop(0)
