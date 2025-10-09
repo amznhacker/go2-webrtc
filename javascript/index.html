@@ -420,6 +420,14 @@
             <div class="action-icon">🤸‍♂️</div>
             <div>Flip</div>
           </button>
+          <button class="action-btn" onclick="startTracking()">
+            <div class="action-icon">🔴</div>
+            <div>Follow Red</div>
+          </button>
+          <button class="action-btn" onclick="stopTracking()">
+            <div class="action-icon">⏹️</div>
+            <div>Stop Track</div>
+          </button>
         </div>
       </div>
     </div>
@@ -536,6 +544,32 @@
       window.quickCommand = quickCommand;
       window.startMove = startMove;
       window.stopMove = stopMove;
+      
+      // Tracking control functions
+      function startTracking() {
+        fetch('/start_tracking')
+          .then(response => response.json())
+          .then(data => {
+            logMessage('🔴 Red object tracking started - Hold up red object!');
+          })
+          .catch(error => {
+            logMessage(`❌ Failed to start tracking: ${error.message}`);
+          });
+      }
+      
+      function stopTracking() {
+        fetch('/stop_tracking')
+          .then(response => response.json())
+          .then(data => {
+            logMessage('⏹️ Object tracking stopped');
+          })
+          .catch(error => {
+            logMessage(`❌ Failed to stop tracking: ${error.message}`);
+          });
+      }
+      
+      window.startTracking = startTracking;
+      window.stopTracking = stopTracking;
 
       // Initialize
       document.addEventListener('DOMContentLoaded', function() {
