@@ -1,15 +1,18 @@
-// Client-side color tracking using the WebRTC video stream
-// Add this to the web interface to process video frames in the browser
+// Greeter Bot - Detects people, approaches them, and says hello
+// Uses face detection to find people and greet them politely
 
-class ClientSideTracker {
+class GreeterBot {
     constructor() {
-        this.tracking = false;
+        this.greeting = false;
         this.canvas = null;
         this.ctx = null;
         this.videoElement = null;
         this.lastCommand = Date.now();
+        this.lastGreeting = 0;
+        this.greetingCooldown = 10000; // 10 seconds between greetings
+        this.greetingDistance = 1500; // Target face area for greeting distance
         
-        console.log('🎯 Client-side tracker initialized');
+        console.log('🤖 Greeter Bot initialized');
     }
     
     init() {
@@ -27,21 +30,21 @@ class ClientSideTracker {
         this.canvas.width = 320;
         this.canvas.height = 240;
         
-        console.log('✅ Client tracker ready');
+        console.log('✅ Greeter Bot ready');
         return true;
     }
     
-    startTracking() {
+    startGreeting() {
         if (!this.init()) return;
         
-        this.tracking = true;
-        console.log('🔴 Starting client-side tracking');
-        this.trackingLoop();
+        this.greeting = true;
+        console.log('🤖 Starting greeter mode');
+        this.greetingLoop();
     }
     
-    stopTracking() {
-        this.tracking = false;
-        console.log('⏹️ Stopping client-side tracking');
+    stopGreeting() {
+        this.greeting = false;
+        console.log('⏹️ Stopping greeter mode');
         
         // Stop robot
         if (globalThis.rtc && globalThis.rtc.publishApi) {
@@ -49,64 +52,81 @@ class ClientSideTracker {
         }
     }
     
-    findRedPixels(imageData) {
+    detectPerson(imageData) {
         const data = imageData.data;
         const width = imageData.width;
         const height = imageData.height;
         
-        let redPixels = [];
-        let totalRed = 0;
+        let skinPixels = [];
+        let totalSkin = 0;
         
-        // Simple red detection - look for pixels with high red, low green/blue
+        // Simple skin/face detection - look for skin-colored pixels
         for (let i = 0; i < data.length; i += 4) {
             const r = data[i];
             const g = data[i + 1];
             const b = data[i + 2];
             
-            // Red detection criteria
-            if (r > 120 && r > g * 1.5 && r > b * 1.5) {
+            // Skin color detection criteria
+            if (r > 95 && g > 40 && b > 20 && 
+                r > g && r > b && 
+                Math.abs(r - g) > 15 && 
+                r - b > 15) {
+                
                 const pixelIndex = i / 4;
                 const x = pixelIndex % width;
                 const y = Math.floor(pixelIndex / width);
                 
-                redPixels.push({x, y});
-                totalRed++;
+                skinPixels.push({x, y});
+                totalSkin++;
             }
         }
         
-        if (redPixels.length < 100) return null; // Not enough red pixels
+        if (skinPixels.length < 200) return null; // Not enough skin pixels
         
-        // Calculate center of red pixels
+        // Calculate center of skin pixels (likely face area)
         let centerX = 0, centerY = 0;
-        redPixels.forEach(pixel => {
+        skinPixels.forEach(pixel => {
             centerX += pixel.x;
             centerY += pixel.y;
         });
         
-        centerX = Math.floor(centerX / redPixels.length);
-        centerY = Math.floor(centerY / redPixels.length);
+        centerX = Math.floor(centerX / skinPixels.length);
+        centerY = Math.floor(centerY / skinPixels.length);
         
         return {
             center: {x: centerX, y: centerY},
-            pixelCount: totalRed,
-            area: totalRed
+            area: totalSkin
         };
     }
     
     sendRobotCommand(x, y, z) {
         // Limit command frequency
         const now = Date.now();
-        if (now - this.lastCommand < 200) return;
+        if (now - this.lastCommand < 300) return;
         this.lastCommand = now;
         
         if (globalThis.rtc && globalThis.rtc.publishApi) {
             globalThis.rtc.publishApi("rt/api/sport/request", 1008, JSON.stringify({x, y, z}));
-            console.log(`🤖 Command: x=${x.toFixed(2)}, y=${y.toFixed(2)}, z=${z.toFixed(2)}`);
+            console.log(`🤖 Greeter: x=${x.toFixed(2)}, y=${y.toFixed(2)}, z=${z.toFixed(2)}`);
         }
     }
     
-    trackingLoop() {
-        if (!this.tracking) return;
+    executeGreeting() {
+        // Send hello wave command
+        if (globalThis.rtc && globalThis.rtc.publishApi) {
+            const uniqID = (new Date().valueOf() % 2147483648) + Math.floor(Math.random() * 1e3);
+            globalThis.rtc.publish("rt/api/sport/request", {
+                header: { identity: { id: uniqID, api_id: 1016 } },
+                parameter: JSON.stringify(1016),
+            });
+            
+            logMessage('👋 Hello! Nice to meet you!');
+            console.log('👋 Greeting executed');
+        }
+    }
+    
+    greetingLoop() {
+        if (!this.greeting) return;
         
         try {
             // Draw video frame to canvas
@@ -115,76 +135,93 @@ class ClientSideTracker {
             // Get image data
             const imageData = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
             
-            // Find red pixels
-            const redBlob = this.findRedPixels(imageData);
+            // Detect person
+            const person = this.detectPerson(imageData);
             
-            if (redBlob) {
-                const centerX = redBlob.center.x;
+            if (person) {
+                const centerX = person.center.x;
                 const frameCenterX = this.canvas.width / 2;
                 const offsetX = centerX - frameCenterX;
+                const now = Date.now();
                 
-                // Movement logic
-                let x = 0, y = 0, z = 0;
-                let status = '🎯 Tracking';
-                
-                // Horizontal tracking (turning)
-                if (Math.abs(offsetX) > 30) {
-                    if (offsetX > 0) {
-                        z = -0.8; // Turn right
-                        status += ' → Right';
+                // Check if we're at greeting distance
+                if (person.area >= this.greetingDistance) {
+                    // Close enough - stop and greet if cooldown passed
+                    this.sendRobotCommand(0, 0, 0);
+                    
+                    if (now - this.lastGreeting > this.greetingCooldown) {
+                        this.executeGreeting();
+                        this.lastGreeting = now;
+                        
+                        // Wait a bit after greeting
+                        setTimeout(() => {
+                            if (Math.random() < 0.3) {
+                                logMessage('😊 Have a great day!');
+                            }
+                        }, 2000);
+                    }
+                    
+                    if (Math.random() < 0.1) {
+                        logMessage('🤖 At greeting distance - Hello!');
+                    }
+                    
+                } else {
+                    // Too far - approach slowly
+                    let x = 0, y = 0, z = 0;
+                    let status = '🚪 Approaching person';
+                    
+                    // Center the person first
+                    if (Math.abs(offsetX) > 40) {
+                        if (offsetX > 0) {
+                            z = -0.4; // Turn right slowly
+                            status += ' → Centering';
+                        } else {
+                            z = 0.4;  // Turn left slowly
+                            status += ' ← Centering';
+                        }
                     } else {
-                        z = 0.8;  // Turn left
-                        status += ' ← Left';
+                        // Centered - move forward slowly
+                        x = 0.2; // Slow approach
+                        status += ' ↑ Moving closer';
+                    }
+                    
+                    // Send command
+                    this.sendRobotCommand(x, y, z);
+                    
+                    // Log status occasionally
+                    if (Math.random() < 0.1) {
+                        logMessage(status + ` (distance: ${Math.round(person.area)})`);
                     }
                 }
                 
-                // Distance tracking (based on red pixel count)
-                if (redBlob.pixelCount < 500) {
-                    x = 0.4; // Move forward
-                    status += ' ↑ Forward';
-                } else if (redBlob.pixelCount > 2000) {
-                    x = -0.3; // Move backward
-                    status += ' ↓ Backward';
-                } else {
-                    status += ' ✓ Good';
-                }
-                
-                // Send command
-                this.sendRobotCommand(x, y, z);
-                
-                // Log status
-                if (Math.random() < 0.1) { // Log occasionally to avoid spam
-                    logMessage(status + ` (${redBlob.pixelCount} red pixels)`);
-                }
-                
             } else {
-                // No red object found - stop robot
+                // No person found - stop and wait
                 this.sendRobotCommand(0, 0, 0);
                 
-                if (Math.random() < 0.05) { // Log occasionally
-                    logMessage('🔍 Searching for red object...');
+                if (Math.random() < 0.05) {
+                    logMessage('👀 Looking for people to greet...');
                 }
             }
             
         } catch (error) {
-            console.error('Tracking error:', error);
+            console.error('Greeter error:', error);
         }
         
-        // Continue tracking
-        setTimeout(() => this.trackingLoop(), 100);
+        // Continue greeting loop
+        setTimeout(() => this.greetingLoop(), 200);
     }
 }
 
-// Create global tracker instance
-const clientTracker = new ClientSideTracker();
+// Create global greeter bot instance
+const greeterBot = new GreeterBot();
 
-// Override the tracking functions to use client-side tracking
-window.startTracking = function() {
-    clientTracker.startTracking();
-    logMessage('🔴 Client-side tracking started - Hold up red object!');
+// Greeter bot functions
+window.startGreeting = function() {
+    greeterBot.startGreeting();
+    logMessage('🤖 Greeter Bot activated - Looking for people to greet!');
 };
 
-window.stopTracking = function() {
-    clientTracker.stopTracking();
-    logMessage('⏹️ Client-side tracking stopped');
+window.stopGreeting = function() {
+    greeterBot.stopGreeting();
+    logMessage('⏹️ Greeter Bot deactivated');
 };

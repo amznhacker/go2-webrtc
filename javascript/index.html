@@ -420,13 +420,21 @@
             <div class="action-icon">🤸‍♂️</div>
             <div>Flip</div>
           </button>
-          <button class="action-btn" onclick="startTracking()">
-            <div class="action-icon">🔴</div>
-            <div>Follow Red</div>
+          <button class="action-btn" onclick="startGreeting()">
+            <div class="action-icon">🤖</div>
+            <div>Greeter Bot</div>
           </button>
-          <button class="action-btn" onclick="stopTracking()">
+          <button class="action-btn" onclick="stopGreeting()">
             <div class="action-icon">⏹️</div>
-            <div>Stop Track</div>
+            <div>Stop Greeter</div>
+          </button>
+          <button class="action-btn" onclick="startFaceTracking()">
+            <div class="action-icon">👤</div>
+            <div>Follow Face</div>
+          </button>
+          <button class="action-btn" onclick="stopFaceTracking()">
+            <div class="action-icon">⏹️</div>
+            <div>Stop Face</div>
           </button>
         </div>
       </div>
@@ -600,5 +608,6 @@
     </script>
     <script type="module" src="index.js"></script>
     <script src="client_side_tracker.js"></script>
+    <script src="face_tracker.js"></script>
   </body>
 </html>
