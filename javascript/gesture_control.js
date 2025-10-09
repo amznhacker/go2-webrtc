@@ -10,6 +10,8 @@ class GestureControl {
         this.lastCommand = Date.now();
         this.lastGesture = '';
         this.gestureConfidence = 0;
+        this.gestureHistory = [];
+        this.requiredConsistency = 3; // Need 3 consistent detections
         
         console.log('✋ Gesture Control initialized');
     }
@@ -75,7 +77,7 @@ class GestureControl {
             }
         }
         
-        if (skinPixels.length < 300) return null;
+        if (skinPixels.length < 600) return null; // Need more pixels for confidence
         
         // Analyze hand position and shape
         return this.analyzeGesture(skinPixels, width, height);
@@ -106,18 +108,19 @@ class GestureControl {
         let gesture = 'unknown';
         let confidence = 0;
         
+        // Much more restrictive gesture detection
         // Open palm (wide and tall)
-        if (handWidth > 40 && handHeight > 50 && area > 800) {
+        if (handWidth > 60 && handHeight > 70 && area > 1200 && area < 2500) {
             gesture = 'open_palm';
             confidence = 0.8;
         }
-        // Closed fist (compact)
-        else if (handWidth < 35 && handHeight < 40 && area > 400 && area < 800) {
+        // Closed fist (compact and small)
+        else if (handWidth < 40 && handHeight < 45 && area > 600 && area < 1000) {
             gesture = 'fist';
             confidence = 0.7;
         }
         // Point gesture (tall and narrow)
-        else if (handHeight > handWidth * 1.5 && area > 300 && area < 600) {
+        else if (handHeight > handWidth * 2 && area > 400 && area < 800 && handWidth < 30) {
             gesture = 'point';
             confidence = 0.6;
         }
@@ -144,11 +147,23 @@ class GestureControl {
     
     executeGestureCommand(gestureData) {
         const now = Date.now();
-        if (now - this.lastCommand < 500) return; // Limit command frequency
+        if (now - this.lastCommand < 2000) return; // Longer cooldown - 2 seconds
         
         const { gesture, position, confidence } = gestureData;
         
-        if (confidence < 0.5) return; // Not confident enough
+        if (confidence < 0.7) return; // Higher confidence threshold
+        
+        // Add to gesture history for consistency check
+        this.gestureHistory.push(gesture);
+        if (this.gestureHistory.length > this.requiredConsistency) {
+            this.gestureHistory.shift();
+        }
+        
+        // Only execute if we have consistent detections
+        if (this.gestureHistory.length < this.requiredConsistency) return;
+        
+        const consistentGesture = this.gestureHistory.every(g => g === gesture);
+        if (!consistentGesture) return;
         
         let x = 0, y = 0, z = 0;
         let command = null;
@@ -237,18 +252,16 @@ class GestureControl {
                 // Execute gesture command
                 this.executeGestureCommand(gestureData);
                 
-                // Log detection occasionally
-                if (Math.random() < 0.1) {
-                    logMessage(`✋ Gesture: ${gestureData.gesture} (${gestureData.position}) - ${Math.round(gestureData.confidence * 100)}%`);
-                }
+                // Always log detections for debugging
+                logMessage(`✋ Detected: ${gestureData.gesture} (${gestureData.position}) - ${Math.round(gestureData.confidence * 100)}% [${this.gestureHistory.length}/${this.requiredConsistency}]`);
             }
             
         } catch (error) {
             console.error('Gesture control error:', error);
         }
         
-        // Continue gesture loop
-        setTimeout(() => this.gestureLoop(), 300);
+        // Continue gesture loop - slower to reduce false positives
+        setTimeout(() => this.gestureLoop(), 500);
     }
 }
 
