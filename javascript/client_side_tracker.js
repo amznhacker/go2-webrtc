@@ -11,6 +11,9 @@ class GreeterBot {
         this.lastGreeting = 0;
         this.greetingCooldown = 10000; // 10 seconds between greetings
         this.greetingDistance = 1500; // Target face area for greeting distance
+        this.scanDirection = 1; // 1 for right, -1 for left
+        this.scanTimer = 0;
+        this.minPersonArea = 800; // Minimum area to consider as person
         
         console.log('🤖 Greeter Bot initialized');
     }
@@ -60,17 +63,18 @@ class GreeterBot {
         let skinPixels = [];
         let totalSkin = 0;
         
-        // Simple skin/face detection - look for skin-colored pixels
+        // More strict skin/face detection - look for skin-colored pixels
         for (let i = 0; i < data.length; i += 4) {
             const r = data[i];
             const g = data[i + 1];
             const b = data[i + 2];
             
-            // Skin color detection criteria
-            if (r > 95 && g > 40 && b > 20 && 
+            // More restrictive skin color detection criteria
+            if (r > 120 && g > 60 && b > 40 && 
                 r > g && r > b && 
-                Math.abs(r - g) > 15 && 
-                r - b > 15) {
+                Math.abs(r - g) > 20 && 
+                r - b > 20 && 
+                r < 220 && g < 180 && b < 140) { // Avoid overexposed areas
                 
                 const pixelIndex = i / 4;
                 const x = pixelIndex % width;
@@ -81,7 +85,7 @@ class GreeterBot {
             }
         }
         
-        if (skinPixels.length < 200) return null; // Not enough skin pixels
+        if (skinPixels.length < 400) return null; // Need more skin pixels for confidence
         
         // Calculate center of skin pixels (likely face area)
         let centerX = 0, centerY = 0;
@@ -92,6 +96,9 @@ class GreeterBot {
         
         centerX = Math.floor(centerX / skinPixels.length);
         centerY = Math.floor(centerY / skinPixels.length);
+        
+        // Only return if area is significant enough to be a person
+        if (totalSkin < this.minPersonArea) return null;
         
         return {
             center: {x: centerX, y: centerY},
@@ -195,11 +202,27 @@ class GreeterBot {
                 }
                 
             } else {
-                // No person found - stop and wait
-                this.sendRobotCommand(0, 0, 0);
+                // No person found - scan around to look for people
+                const now = Date.now();
                 
-                if (Math.random() < 0.05) {
-                    logMessage('👀 Looking for people to greet...');
+                if (now - this.scanTimer > 3000) { // Scan every 3 seconds
+                    // Turn slowly to scan for people
+                    const scanSpeed = 0.3;
+                    this.sendRobotCommand(0, 0, this.scanDirection * scanSpeed);
+                    
+                    // Change direction every few seconds
+                    if (Math.random() < 0.3) {
+                        this.scanDirection *= -1;
+                    }
+                    
+                    this.scanTimer = now;
+                    
+                    if (Math.random() < 0.1) {
+                        logMessage('👀 Scanning for people to greet...');
+                    }
+                } else {
+                    // Stop between scans
+                    this.sendRobotCommand(0, 0, 0);
                 }
             }
             
