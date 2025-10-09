@@ -69,7 +69,7 @@ function handleConnectClick() {
       connectBtn.disabled = false;
       updateConnectionStatus(true);
       logMessage(`✅ Successfully connected to GO2!`);
-      logMessage(`🖱️ Mouse: Wheel=Forward/Back, Shift+Wheel=Strafe, Hold Clicks=Turn, Double-Click=STOP`);
+      logMessage(`🖱️ Mouse: Wheel=Forward/Back, Middle+Wheel=Strafe, Hold Clicks=Turn, Double-Click=STOP`);
       logMessage(`⌨️ Keyboard: WASD=Move, QE=Turn`);
       logMessage(`🎮 Xbox: Hold LB + sticks to move`);
       
@@ -269,6 +269,23 @@ function updateControlMethod(method, icon) {
   }
 }
 
+let middleButtonPressed = false;
+
+// Track middle button state
+document.addEventListener('mousedown', function(event) {
+  if (event.button === 1) {
+    middleButtonPressed = true;
+    event.preventDefault();
+  }
+});
+
+document.addEventListener('mouseup', function(event) {
+  if (event.button === 1) {
+    middleButtonPressed = false;
+    event.preventDefault();
+  }
+});
+
 // Mouse wheel controls
 document.addEventListener('wheel', function(event) {
   // Don't trigger if not connected
@@ -276,13 +293,13 @@ document.addEventListener('wheel', function(event) {
   
   event.preventDefault();
   
-  if (event.shiftKey) {
-    // Shift + wheel = sideways movement
+  if (middleButtonPressed) {
+    // Middle button + wheel = sideways movement
     updateControlMethod('Mouse', '🖱️');
     if (event.deltaY < 0) {
-      // Shift + scroll up - Strafe left
-      logMessage('🖱️ Shift + wheel up - Strafe left');
-      globalThis.rtc.publishApi("rt/api/sport/request", 1008, JSON.stringify({x: 0, y: 0.3, z: 0}));
+      // Middle + scroll up - Strafe left
+      logMessage('🖱️ Middle + wheel up - Strafe left');
+      globalThis.rtc.publishApi("rt/api/sport/request", 1008, JSON.stringify({x: 0, y: 0.5, z: 0}));
       startMovementTimeout();
       setTimeout(() => {
         if (globalThis.rtc && globalThis.rtc.publishApi) {
@@ -290,9 +307,31 @@ document.addEventListener('wheel', function(event) {
         }
       }, 200);
     } else if (event.deltaY > 0) {
-      // Shift + scroll down - Strafe right
+      // Middle + scroll down - Strafe right
+      logMessage('🖱️ Middle + wheel down - Strafe right');
+      globalThis.rtc.publishApi("rt/api/sport/request", 1008, JSON.stringify({x: 0, y: -0.5, z: 0}));
+      startMovementTimeout();
+      setTimeout(() => {
+        if (globalThis.rtc && globalThis.rtc.publishApi) {
+          globalThis.rtc.publishApi("rt/api/sport/request", 1008, JSON.stringify({x: 0, y: 0, z: 0}));
+        }
+      }, 200);
+    }
+  } else if (event.shiftKey) {
+    // Shift + wheel = sideways movement (backup option)
+    updateControlMethod('Mouse', '🖱️');
+    if (event.deltaY < 0) {
+      logMessage('🖱️ Shift + wheel up - Strafe left');
+      globalThis.rtc.publishApi("rt/api/sport/request", 1008, JSON.stringify({x: 0, y: 0.5, z: 0}));
+      startMovementTimeout();
+      setTimeout(() => {
+        if (globalThis.rtc && globalThis.rtc.publishApi) {
+          globalThis.rtc.publishApi("rt/api/sport/request", 1008, JSON.stringify({x: 0, y: 0, z: 0}));
+        }
+      }, 200);
+    } else if (event.deltaY > 0) {
       logMessage('🖱️ Shift + wheel down - Strafe right');
-      globalThis.rtc.publishApi("rt/api/sport/request", 1008, JSON.stringify({x: 0, y: -0.3, z: 0}));
+      globalThis.rtc.publishApi("rt/api/sport/request", 1008, JSON.stringify({x: 0, y: -0.5, z: 0}));
       startMovementTimeout();
       setTimeout(() => {
         if (globalThis.rtc && globalThis.rtc.publishApi) {
@@ -306,7 +345,7 @@ document.addEventListener('wheel', function(event) {
     if (event.deltaY < 0) {
       // Scroll up - Forward
       logMessage('🖱️ Mouse wheel up - Forward');
-      globalThis.rtc.publishApi("rt/api/sport/request", 1008, JSON.stringify({x: 0.4, y: 0, z: 0}));
+      globalThis.rtc.publishApi("rt/api/sport/request", 1008, JSON.stringify({x: 0.7, y: 0, z: 0}));
       startMovementTimeout();
       setTimeout(() => {
         if (globalThis.rtc && globalThis.rtc.publishApi) {
@@ -316,7 +355,7 @@ document.addEventListener('wheel', function(event) {
     } else if (event.deltaY > 0) {
       // Scroll down - Backward
       logMessage('🖱️ Mouse wheel down - Backward');
-      globalThis.rtc.publishApi("rt/api/sport/request", 1008, JSON.stringify({x: -0.3, y: 0, z: 0}));
+      globalThis.rtc.publishApi("rt/api/sport/request", 1008, JSON.stringify({x: -0.5, y: 0, z: 0}));
       startMovementTimeout();
       setTimeout(() => {
         if (globalThis.rtc && globalThis.rtc.publishApi) {
@@ -370,12 +409,12 @@ document.addEventListener('mousedown', function(event) {
     // Left click - Hold to turn left
     updateControlMethod('Mouse', '🖱️');
     logMessage('🖱️ Hold left click - Turn left');
-    globalThis.rtc.publishApi("rt/api/sport/request", 1008, JSON.stringify({x: 0, y: 0, z: 1.0}));
+    globalThis.rtc.publishApi("rt/api/sport/request", 1008, JSON.stringify({x: 0, y: 0, z: 1.5}));
     startMovementTimeout();
     
     mouseInterval = setInterval(() => {
       if (globalThis.rtc && globalThis.rtc.publishApi) {
-        globalThis.rtc.publishApi("rt/api/sport/request", 1008, JSON.stringify({x: 0, y: 0, z: 1.0}));
+        globalThis.rtc.publishApi("rt/api/sport/request", 1008, JSON.stringify({x: 0, y: 0, z: 1.5}));
         startMovementTimeout();
       }
     }, 100);
@@ -384,12 +423,12 @@ document.addEventListener('mousedown', function(event) {
     event.preventDefault();
     updateControlMethod('Mouse', '🖱️');
     logMessage('🖱️ Hold right click - Turn right');
-    globalThis.rtc.publishApi("rt/api/sport/request", 1008, JSON.stringify({x: 0, y: 0, z: -1.0}));
+    globalThis.rtc.publishApi("rt/api/sport/request", 1008, JSON.stringify({x: 0, y: 0, z: -1.5}));
     startMovementTimeout();
     
     mouseInterval = setInterval(() => {
       if (globalThis.rtc && globalThis.rtc.publishApi) {
-        globalThis.rtc.publishApi("rt/api/sport/request", 1008, JSON.stringify({x: 0, y: 0, z: -1.0}));
+        globalThis.rtc.publishApi("rt/api/sport/request", 1008, JSON.stringify({x: 0, y: 0, z: -1.5}));
         startMovementTimeout();
       }
     }, 100);
