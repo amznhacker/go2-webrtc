@@ -374,6 +374,7 @@
           <div class="status-dot" id="status-dot"></div>
           <span id="status-text">Disconnected</span>
         </div>
+        <button class="settings-btn" id="mouseToggle" onclick="toggleMouseControl()" style="width: auto; padding: 0 16px; font-size: 12px; font-weight: 600;">Mouse: OFF</button>
         <button class="settings-btn" id="settings-toggle">⚙️</button>
       </div>
 
@@ -420,29 +421,18 @@
             <div class="action-icon">🤸‍♂️</div>
             <div>Flip</div>
           </button>
-          <button class="action-btn" onclick="startGreeting()">
-            <div class="action-icon">🤖</div>
-            <div>Greeter Bot</div>
+
+          <button class="action-btn" onclick="quickCommand(1023)">
+            <div class="action-icon">🕺</div>
+            <div>Dance 2</div>
           </button>
-          <button class="action-btn" onclick="stopGreeting()">
-            <div class="action-icon">⏹️</div>
-            <div>Stop Greeter</div>
+          <button class="action-btn" onclick="quickCommand(1031)">
+            <div class="action-icon">🦘</div>
+            <div>Jump</div>
           </button>
-          <button class="action-btn" onclick="startFaceTracking()">
-            <div class="action-icon">👤</div>
-            <div>Follow Face</div>
-          </button>
-          <button class="action-btn" onclick="stopFaceTracking()">
-            <div class="action-icon">⏹️</div>
-            <div>Stop Face</div>
-          </button>
-          <button class="action-btn" onclick="startGestureControl()">
-            <div class="action-icon">✋</div>
-            <div>Gesture Control</div>
-          </button>
-          <button class="action-btn" onclick="stopGestureControl()">
-            <div class="action-icon">⏹️</div>
-            <div>Stop Gesture</div>
+          <button class="action-btn" onclick="quickCommand(1036)">
+            <div class="action-icon">💖</div>
+            <div>Heart</div>
           </button>
         </div>
       </div>
@@ -561,31 +551,7 @@
       window.startMove = startMove;
       window.stopMove = stopMove;
       
-      // Tracking control functions
-      function startTracking() {
-        fetch('/start_tracking')
-          .then(response => response.json())
-          .then(data => {
-            logMessage('🔴 Red object tracking started - Hold up red object!');
-          })
-          .catch(error => {
-            logMessage(`❌ Failed to start tracking: ${error.message}`);
-          });
-      }
-      
-      function stopTracking() {
-        fetch('/stop_tracking')
-          .then(response => response.json())
-          .then(data => {
-            logMessage('⏹️ Object tracking stopped');
-          })
-          .catch(error => {
-            logMessage(`❌ Failed to stop tracking: ${error.message}`);
-          });
-      }
-      
-      window.startTracking = startTracking;
-      window.stopTracking = stopTracking;
+
 
       // Initialize
       document.addEventListener('DOMContentLoaded', function() {
@@ -615,8 +581,6 @@
       });
     </script>
     <script type="module" src="index.js"></script>
-    <script src="client_side_tracker.js"></script>
-    <script src="face_tracker.js"></script>
-    <script src="gesture_control.js"></script>
+
   </body>
 </html>

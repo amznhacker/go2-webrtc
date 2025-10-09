@@ -288,8 +288,8 @@ document.addEventListener('mouseup', function(event) {
 
 // Mouse wheel controls
 document.addEventListener('wheel', function(event) {
-  // Don't trigger if not connected
-  if (!globalThis.rtc || !globalThis.rtc.publishApi) return;
+  // Don't trigger if not connected or mouse control disabled
+  if (!globalThis.rtc || !globalThis.rtc.publishApi || !mouseControlEnabled) return;
   
   event.preventDefault();
   
@@ -393,8 +393,8 @@ function emergencyStop() {
 
 // Mouse click controls - hold to turn
 document.addEventListener('mousedown', function(event) {
-  // Don't trigger if not connected or clicking on UI elements
-  if (!globalThis.rtc || !globalThis.rtc.publishApi) return;
+  // Don't trigger if not connected, mouse control disabled, or clicking on UI elements
+  if (!globalThis.rtc || !globalThis.rtc.publishApi || !mouseControlEnabled) return;
   if (event.target.tagName === 'INPUT' || event.target.tagName === 'BUTTON' || event.target.tagName === 'SELECT') return;
   
   // Check for double-click emergency stop
@@ -454,6 +454,36 @@ document.addEventListener('mouseup', function(event) {
 
 // Make updateControlMethod global so it shows in UI
 window.updateControlMethod = updateControlMethod;
+
+// Mouse control toggle
+let mouseControlEnabled = false;
+
+function toggleMouseControl() {
+  mouseControlEnabled = !mouseControlEnabled;
+  const toggleBtn = document.getElementById('mouseToggle');
+  toggleBtn.textContent = mouseControlEnabled ? 'Mouse: ON' : 'Mouse: OFF';
+  toggleBtn.style.background = mouseControlEnabled ? 'rgba(48, 209, 88, 0.3)' : 'rgba(255,255,255,0.1)';
+  
+  if (mouseControlEnabled) {
+    logMessage('🖱️ Mouse control enabled');
+  } else {
+    logMessage('🖱️ Mouse control disabled');
+    // Stop any ongoing mouse movement
+    if (mouseInterval) {
+      clearInterval(mouseInterval);
+      mouseInterval = null;
+    }
+    if (movementTimeout) {
+      clearTimeout(movementTimeout);
+      movementTimeout = null;
+    }
+    if (globalThis.rtc && globalThis.rtc.publishApi) {
+      globalThis.rtc.publishApi("rt/api/sport/request", 1008, JSON.stringify({x: 0, y: 0, z: 0}));
+    }
+  }
+}
+
+window.toggleMouseControl = toggleMouseControl;
 
 // Disable right-click context menu
 document.addEventListener('contextmenu', function(event) {
