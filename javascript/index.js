@@ -69,7 +69,7 @@ function handleConnectClick() {
       connectBtn.disabled = false;
       updateConnectionStatus(true);
       logMessage(`✅ Successfully connected to GO2!`);
-      logMessage(`🖱️ Mouse: Wheel=Forward/Back, Shift+Wheel=Strafe, Hold Clicks=Turn, Middle=STOP`);
+      logMessage(`🖱️ Mouse: Wheel=Forward/Back, Shift+Wheel=Strafe, Hold Clicks=Turn, Double-Click=STOP`);
       logMessage(`⌨️ Keyboard: WASD=Move, QE=Turn`);
       logMessage(`🎮 Xbox: Hold LB + sticks to move`);
       
@@ -282,7 +282,8 @@ document.addEventListener('wheel', function(event) {
     if (event.deltaY < 0) {
       // Shift + scroll up - Strafe left
       logMessage('🖱️ Shift + wheel up - Strafe left');
-      globalThis.rtc.publishApi("rt/api/sport/request", 1008, JSON.stringify({x: 0, y: 0.4, z: 0}));
+      globalThis.rtc.publishApi("rt/api/sport/request", 1008, JSON.stringify({x: 0, y: 0.3, z: 0}));
+      startMovementTimeout();
       setTimeout(() => {
         if (globalThis.rtc && globalThis.rtc.publishApi) {
           globalThis.rtc.publishApi("rt/api/sport/request", 1008, JSON.stringify({x: 0, y: 0, z: 0}));
@@ -291,7 +292,8 @@ document.addEventListener('wheel', function(event) {
     } else if (event.deltaY > 0) {
       // Shift + scroll down - Strafe right
       logMessage('🖱️ Shift + wheel down - Strafe right');
-      globalThis.rtc.publishApi("rt/api/sport/request", 1008, JSON.stringify({x: 0, y: -0.4, z: 0}));
+      globalThis.rtc.publishApi("rt/api/sport/request", 1008, JSON.stringify({x: 0, y: -0.3, z: 0}));
+      startMovementTimeout();
       setTimeout(() => {
         if (globalThis.rtc && globalThis.rtc.publishApi) {
           globalThis.rtc.publishApi("rt/api/sport/request", 1008, JSON.stringify({x: 0, y: 0, z: 0}));
@@ -304,7 +306,8 @@ document.addEventListener('wheel', function(event) {
     if (event.deltaY < 0) {
       // Scroll up - Forward
       logMessage('🖱️ Mouse wheel up - Forward');
-      globalThis.rtc.publishApi("rt/api/sport/request", 1008, JSON.stringify({x: 0.6, y: 0, z: 0}));
+      globalThis.rtc.publishApi("rt/api/sport/request", 1008, JSON.stringify({x: 0.4, y: 0, z: 0}));
+      startMovementTimeout();
       setTimeout(() => {
         if (globalThis.rtc && globalThis.rtc.publishApi) {
           globalThis.rtc.publishApi("rt/api/sport/request", 1008, JSON.stringify({x: 0, y: 0, z: 0}));
@@ -313,7 +316,8 @@ document.addEventListener('wheel', function(event) {
     } else if (event.deltaY > 0) {
       // Scroll down - Backward
       logMessage('🖱️ Mouse wheel down - Backward');
-      globalThis.rtc.publishApi("rt/api/sport/request", 1008, JSON.stringify({x: -0.4, y: 0, z: 0}));
+      globalThis.rtc.publishApi("rt/api/sport/request", 1008, JSON.stringify({x: -0.3, y: 0, z: 0}));
+      startMovementTimeout();
       setTimeout(() => {
         if (globalThis.rtc && globalThis.rtc.publishApi) {
           globalThis.rtc.publishApi("rt/api/sport/request", 1008, JSON.stringify({x: 0, y: 0, z: 0}));
@@ -324,6 +328,29 @@ document.addEventListener('wheel', function(event) {
 });
 
 let mouseInterval = null;
+let movementTimeout = null;
+let lastClickTime = 0;
+
+// Auto-stop movement after timeout
+function startMovementTimeout() {
+  if (movementTimeout) clearTimeout(movementTimeout);
+  movementTimeout = setTimeout(() => {
+    if (globalThis.rtc && globalThis.rtc.publishApi) {
+      globalThis.rtc.publishApi("rt/api/sport/request", 1008, JSON.stringify({x: 0, y: 0, z: 0}));
+      logMessage('⏱️ Auto-stopped after 2 seconds');
+    }
+  }, 2000);
+}
+
+// Emergency stop function
+function emergencyStop() {
+  logMessage('🛑 EMERGENCY STOP - Double click detected');
+  const uniqID = (new Date().valueOf() % 2147483648) + Math.floor(Math.random() * 1e3);
+  globalThis.rtc.publish("rt/api/sport/request", {
+    header: { identity: { id: uniqID, api_id: 1001 } },
+    parameter: JSON.stringify(1001),
+  });
+}
 
 // Mouse click controls - hold to turn
 document.addEventListener('mousedown', function(event) {
@@ -331,37 +358,39 @@ document.addEventListener('mousedown', function(event) {
   if (!globalThis.rtc || !globalThis.rtc.publishApi) return;
   if (event.target.tagName === 'INPUT' || event.target.tagName === 'BUTTON' || event.target.tagName === 'SELECT') return;
   
+  // Check for double-click emergency stop
+  const currentTime = Date.now();
+  if (currentTime - lastClickTime < 300) {
+    emergencyStop();
+    return;
+  }
+  lastClickTime = currentTime;
+  
   if (event.button === 0) {
     // Left click - Hold to turn left
     updateControlMethod('Mouse', '🖱️');
     logMessage('🖱️ Hold left click - Turn left');
-    globalThis.rtc.publishApi("rt/api/sport/request", 1008, JSON.stringify({x: 0, y: 0, z: 1.5}));
+    globalThis.rtc.publishApi("rt/api/sport/request", 1008, JSON.stringify({x: 0, y: 0, z: 1.0}));
+    startMovementTimeout();
     
     mouseInterval = setInterval(() => {
       if (globalThis.rtc && globalThis.rtc.publishApi) {
-        globalThis.rtc.publishApi("rt/api/sport/request", 1008, JSON.stringify({x: 0, y: 0, z: 1.5}));
+        globalThis.rtc.publishApi("rt/api/sport/request", 1008, JSON.stringify({x: 0, y: 0, z: 1.0}));
+        startMovementTimeout();
       }
     }, 100);
-  } else if (event.button === 1) {
-    // Middle click (wheel press) - Emergency stop
-    event.preventDefault();
-    updateControlMethod('Mouse', '🖱️');
-    logMessage('🖱️ Middle click - EMERGENCY STOP');
-    const uniqID = (new Date().valueOf() % 2147483648) + Math.floor(Math.random() * 1e3);
-    globalThis.rtc.publish("rt/api/sport/request", {
-      header: { identity: { id: uniqID, api_id: 1001 } },
-      parameter: JSON.stringify(1001),
-    });
   } else if (event.button === 2) {
     // Right click - Hold to turn right
     event.preventDefault();
     updateControlMethod('Mouse', '🖱️');
     logMessage('🖱️ Hold right click - Turn right');
-    globalThis.rtc.publishApi("rt/api/sport/request", 1008, JSON.stringify({x: 0, y: 0, z: -1.5}));
+    globalThis.rtc.publishApi("rt/api/sport/request", 1008, JSON.stringify({x: 0, y: 0, z: -1.0}));
+    startMovementTimeout();
     
     mouseInterval = setInterval(() => {
       if (globalThis.rtc && globalThis.rtc.publishApi) {
-        globalThis.rtc.publishApi("rt/api/sport/request", 1008, JSON.stringify({x: 0, y: 0, z: -1.5}));
+        globalThis.rtc.publishApi("rt/api/sport/request", 1008, JSON.stringify({x: 0, y: 0, z: -1.0}));
+        startMovementTimeout();
       }
     }, 100);
   }
@@ -373,11 +402,19 @@ document.addEventListener('mouseup', function(event) {
     clearInterval(mouseInterval);
     mouseInterval = null;
     
+    if (movementTimeout) {
+      clearTimeout(movementTimeout);
+      movementTimeout = null;
+    }
+    
     if (globalThis.rtc && globalThis.rtc.publishApi) {
       globalThis.rtc.publishApi("rt/api/sport/request", 1008, JSON.stringify({x: 0, y: 0, z: 0}));
     }
   }
 });
+
+// Make updateControlMethod global so it shows in UI
+window.updateControlMethod = updateControlMethod;
 
 // Disable right-click context menu
 document.addEventListener('contextmenu', function(event) {
