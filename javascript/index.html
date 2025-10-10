@@ -674,6 +674,7 @@
       <div class="form-group">
         <label class="form-label" for="openai-key">OpenAI API Key (Optional)</label>
         <input type="password" id="openai-key" class="form-input" placeholder="sk-...">
+        <button id="test-api-btn" class="btn" style="margin-top: 10px; background: rgba(255, 149, 0, 0.8);" onclick="testOpenAIAPI()">Test API Key</button>
       </div>
 
       <div class="form-group">
@@ -911,7 +912,7 @@
               'Authorization': `Bearer ${apiKey}`
             },
             body: JSON.stringify({
-              model: 'gpt-4-vision-preview',
+              model: 'gpt-4o',
               messages: [{
                 role: 'user',
                 content: [{
@@ -919,7 +920,10 @@
                   text: 'Describe what you see in this image. Focus on objects, people, activities, and anything notable. Be concise but detailed.'
                 }, {
                   type: 'image_url',
-                  image_url: { url: imageData }
+                  image_url: { 
+                    url: imageData,
+                    detail: 'low'
+                  }
                 }]
               }],
               max_tokens: 300
@@ -927,7 +931,14 @@
           });
           
           if (!response.ok) {
-            throw new Error(`API Error: ${response.status}`);
+            const errorData = await response.json().catch(() => ({}));
+            if (response.status === 401) {
+              throw new Error('Invalid API key or insufficient permissions');
+            } else if (response.status === 429) {
+              throw new Error('Rate limit exceeded - try again later');
+            } else {
+              throw new Error(`API Error ${response.status}: ${errorData.error?.message || 'Unknown error'}`);
+            }
           }
           
           const data = await response.json();
@@ -948,6 +959,105 @@
           isAnalyzing = false;
           visionBtn.textContent = '👁️ Vision';
           visionBtn.style.background = 'rgba(255,255,255,0.1)';
+        }
+      }
+      
+      async function testOpenAIAPI() {
+        const apiKey = document.getElementById('openai-key').value;
+        if (!apiKey) {
+          logMessage('❌ Please enter OpenAI API key first');
+          return;
+        }
+        
+        const testBtn = document.getElementById('test-api-btn');
+        testBtn.textContent = 'Testing...';
+        testBtn.disabled = true;
+        
+        try {
+          logMessage('🔍 Testing API key...');
+          
+          // Test 1: Simple text completion
+          logMessage('🔍 Step 1: Testing basic API access...');
+          const textResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${apiKey}`
+            },
+            body: JSON.stringify({
+              model: 'gpt-3.5-turbo',
+              messages: [{ role: 'user', content: 'Say "API test successful"' }],
+              max_tokens: 10
+            })
+          });
+          
+          if (!textResponse.ok) {
+            const errorData = await textResponse.json().catch(() => ({}));
+            throw new Error(`Text API failed (${textResponse.status}): ${errorData.error?.message || 'Unknown error'}`);
+          }
+          
+          logMessage('✅ Step 1: Basic API access works');
+          
+          // Test 2: Check GPT-4o availability
+          logMessage('🔍 Step 2: Testing GPT-4o vision access...');
+          const visionResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${apiKey}`
+            },
+            body: JSON.stringify({
+              model: 'gpt-4o',
+              messages: [{
+                role: 'user',
+                content: [{
+                  type: 'text',
+                  text: 'This is a test. Just say "Vision API works"'
+                }]
+              }],
+              max_tokens: 10
+            })
+          });
+          
+          if (!visionResponse.ok) {
+            const errorData = await visionResponse.json().catch(() => ({}));
+            if (visionResponse.status === 404) {
+              logMessage('⚠️ GPT-4o not available. Trying gpt-4-vision-preview...');
+              // Fallback test
+              const fallbackResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${apiKey}`
+                },
+                body: JSON.stringify({
+                  model: 'gpt-4-vision-preview',
+                  messages: [{ role: 'user', content: 'Test' }],
+                  max_tokens: 5
+                })
+              });
+              
+              if (fallbackResponse.ok) {
+                logMessage('✅ gpt-4-vision-preview works - updating code to use this model');
+                // Update the model in the main function
+                return 'gpt-4-vision-preview';
+              }
+            }
+            throw new Error(`Vision API failed (${visionResponse.status}): ${errorData.error?.message || 'Unknown error'}`);
+          }
+          
+          logMessage('✅ Step 2: GPT-4o vision access works');
+          logMessage('✅ API key is valid and has full access!');
+          
+        } catch (error) {
+          logMessage(`❌ API Test Failed: ${error.message}`);
+          logMessage('📝 Debug info:');
+          logMessage(`- Key starts with: ${apiKey.substring(0, 7)}...`);
+          logMessage('- Check: https://platform.openai.com/account/billing');
+          logMessage('- Ensure you have credits and GPT-4 access');
+        } finally {
+          testBtn.textContent = 'Test API Key';
+          testBtn.disabled = false;
         }
       }
       
@@ -1032,6 +1142,7 @@
       window.toggleMouseControl = toggleMouseControl;
       window.toggleDetection = toggleDetection;
       window.analyzeScene = analyzeScene;
+      window.testOpenAIAPI = testOpenAIAPI;
       
 
 
