@@ -696,7 +696,7 @@
       </div>
       
       <div style="text-align: center; margin-top: 20px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.2); font-size: 12px; color: rgba(255,255,255,0.6);">
-        Version 1.5.0 - Object Detection AI
+        Version 1.6.0 - OCR Text Detection
       </div>
     </div>
 
@@ -832,29 +832,11 @@
         
         try {
           const { data: { text } } = await ocrWorker.recognize(video);
-          const upperText = text.toUpperCase();
+          const cleanText = text.trim();
           
-          if (upperText.includes('ICE')) {
+          if (cleanText.length > 2) {
             lastEnemyAlert = Date.now();
-            logMessage('🚨 ENEMY DETECTED: ICE text found!');
-            
-            // Visual alert
-            const canvas = document.getElementById('detection-canvas');
-            const ctx = canvas.getContext('2d');
-            ctx.fillStyle = 'rgba(255, 0, 0, 0.3)';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            
-            // Audio alert if available
-            if ('speechSynthesis' in window) {
-              const utterance = new SpeechSynthesisUtterance('ENEMY chinga la migra');
-              utterance.rate = 1.5;
-              speechSynthesis.speak(utterance);
-            }
-            
-            // Vibration alert
-            if (navigator.vibrate) {
-              navigator.vibrate([200, 100, 200, 100, 200]);
-            }
+            logMessage(`📝 Text detected: "${cleanText}"`);
           }
         } catch (error) {
           console.error('OCR error:', error);
