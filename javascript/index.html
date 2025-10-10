@@ -846,13 +846,16 @@
                 voice.gender === 'female' ||
                 name.includes('female') ||
                 name.includes('woman') ||
-                // Microsoft female voices
+                // Microsoft female voices (prioritize natural ones)
+                name.includes('aria') ||
+                name.includes('jenny') ||
                 name.includes('zira') ||
                 name.includes('sabina') ||
                 name.includes('caroline') ||
                 name.includes('nathalie') ||
                 name.includes('cortana') ||
                 name.includes('hazel') ||
+                name.includes('michelle') ||
                 // Common female voice names
                 name.includes('samantha') ||
                 name.includes('karen') ||
