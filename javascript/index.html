@@ -554,11 +554,14 @@
 
     <script src="md5.js"></script>
     <script src="joy.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.10.0/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.2/dist/coco-ssd.min.js"></script>
   </head>
   <body>
     <!-- Video Background -->
     <div class="video-background">
       <video id="video-frame" autoplay playsinline muted></video>
+      <canvas id="detection-canvas" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 2;"></canvas>
     </div>
 
     <!-- UI Overlay -->
@@ -570,6 +573,7 @@
           <span id="status-text">Disconnected</span>
         </div>
         <button class="settings-btn" id="mouseToggle" onclick="toggleMouseControl()" style="width: auto; padding: 0 16px; font-size: 12px; font-weight: 600;">Mouse: OFF</button>
+        <button class="settings-btn" id="detectionToggle" onclick="toggleDetection()" style="width: auto; padding: 0 16px; font-size: 12px; font-weight: 600;">AI: OFF</button>
         <button class="settings-btn" id="settings-toggle">⚙️</button>
       </div>
 
@@ -691,7 +695,7 @@
       </div>
       
       <div style="text-align: center; margin-top: 20px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.2); font-size: 12px; color: rgba(255,255,255,0.6);">
-        Version 1.4.0 - Smart UI Zones
+        Version 1.5.0 - Object Detection AI
       </div>
     </div>
 
@@ -713,6 +717,111 @@
 
       // Mouse control state
       window.mouseControlEnabled = false;
+      
+      // Object detection state
+      let detectionEnabled = false;
+      let detectionModel = null;
+      let detectionInterval = null;
+      
+      async function loadDetectionModel() {
+        try {
+          logMessage('🤖 Loading AI detection model...');
+          detectionModel = await cocoSsd.load();
+          logMessage('✅ AI detection model loaded successfully');
+          return true;
+        } catch (error) {
+          logMessage('❌ Failed to load AI model: ' + error.message);
+          return false;
+        }
+      }
+      
+      async function toggleDetection() {
+        const toggleBtn = document.getElementById('detectionToggle');
+        
+        if (!detectionEnabled) {
+          if (!detectionModel) {
+            toggleBtn.textContent = 'AI: Loading...';
+            const loaded = await loadDetectionModel();
+            if (!loaded) {
+              toggleBtn.textContent = 'AI: Error';
+              return;
+            }
+          }
+          
+          detectionEnabled = true;
+          toggleBtn.textContent = 'AI: ON';
+          toggleBtn.style.background = 'rgba(255, 149, 0, 0.3)';
+          startDetection();
+          logMessage('👁️ Object detection enabled');
+        } else {
+          detectionEnabled = false;
+          toggleBtn.textContent = 'AI: OFF';
+          toggleBtn.style.background = 'rgba(255,255,255,0.1)';
+          stopDetection();
+          logMessage('👁️ Object detection disabled');
+        }
+      }
+      
+      function startDetection() {
+        const video = document.getElementById('video-frame');
+        const canvas = document.getElementById('detection-canvas');
+        const ctx = canvas.getContext('2d');
+        
+        detectionInterval = setInterval(async () => {
+          if (!detectionEnabled || !detectionModel || !video.videoWidth) return;
+          
+          // Resize canvas to match video
+          canvas.width = video.videoWidth;
+          canvas.height = video.videoHeight;
+          
+          try {
+            const predictions = await detectionModel.detect(video);
+            
+            // Clear previous drawings
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw detections
+            predictions.forEach(prediction => {
+              const [x, y, width, height] = prediction.bbox;
+              const score = Math.round(prediction.score * 100);
+              
+              // Draw bounding box
+              ctx.strokeStyle = '#FF9500';
+              ctx.lineWidth = 3;
+              ctx.strokeRect(x, y, width, height);
+              
+              // Draw label background
+              ctx.fillStyle = 'rgba(255, 149, 0, 0.8)';
+              ctx.fillRect(x, y - 25, width, 25);
+              
+              // Draw label text
+              ctx.fillStyle = '#000';
+              ctx.font = '16px Inter';
+              ctx.fillText(`${prediction.class} ${score}%`, x + 5, y - 5);
+            });
+            
+            // Log detections
+            if (predictions.length > 0) {
+              const objects = predictions.map(p => `${p.class}(${Math.round(p.score*100)}%)`).join(', ');
+              logMessage(`👁️ Detected: ${objects}`);
+            }
+          } catch (error) {
+            console.error('Detection error:', error);
+          }
+        }, 500); // Run detection every 500ms
+      }
+      
+      function stopDetection() {
+        if (detectionInterval) {
+          clearInterval(detectionInterval);
+          detectionInterval = null;
+        }
+        
+        // Clear canvas
+        const canvas = document.getElementById('detection-canvas');
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+      }
       
       function quickCommand(cmdId) {
         if(globalThis.rtc !== undefined) {
@@ -793,6 +902,7 @@
       window.stopMove = stopMove;
       window.toggleAllCommands = toggleAllCommands;
       window.toggleMouseControl = toggleMouseControl;
+      window.toggleDetection = toggleDetection;
       
 
 
