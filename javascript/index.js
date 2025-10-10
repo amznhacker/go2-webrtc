@@ -14,12 +14,16 @@ globalThis.logMessage = logMessage;
 function loadSavedValues() {
   const savedToken = localStorage.getItem("token");
   const savedRobotIP = localStorage.getItem("robotIP");
+  const savedOpenaiKey = localStorage.getItem("openaiKey");
 
   if (savedToken) {
     document.getElementById("token").value = savedToken;
   }
   if (savedRobotIP) {
     document.getElementById("robot-ip").value = savedRobotIP;
+  }
+  if (savedOpenaiKey) {
+    document.getElementById("openai-key").value = savedOpenaiKey;
   }
 
   const commandSelect = document.getElementById("command");
@@ -35,9 +39,11 @@ function loadSavedValues() {
 function saveValuesToLocalStorage() {
   const token = document.getElementById("token").value;
   const robotIP = document.getElementById("robot-ip").value;
+  const openaiKey = document.getElementById("openai-key").value;
 
   localStorage.setItem("token", token);
   localStorage.setItem("robotIP", robotIP);
+  localStorage.setItem("openaiKey", openaiKey);
 }
 
 // Function to handle connect button click
