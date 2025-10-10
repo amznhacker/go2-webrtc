@@ -289,7 +289,7 @@ document.addEventListener('mouseup', function(event) {
 // Mouse wheel controls
 document.addEventListener('wheel', function(event) {
   // Don't trigger if not connected or mouse control disabled
-  if (!globalThis.rtc || !globalThis.rtc.publishApi || !mouseControlEnabled) return;
+  if (!globalThis.rtc || !globalThis.rtc.publishApi || !window.mouseControlEnabled) return;
   
   event.preventDefault();
   
@@ -394,7 +394,7 @@ function emergencyStop() {
 // Mouse click controls - hold to turn
 document.addEventListener('mousedown', function(event) {
   // Don't trigger if not connected, mouse control disabled, or clicking on UI elements
-  if (!globalThis.rtc || !globalThis.rtc.publishApi || !mouseControlEnabled) return;
+  if (!globalThis.rtc || !globalThis.rtc.publishApi || !window.mouseControlEnabled) return;
   if (event.target.tagName === 'INPUT' || event.target.tagName === 'BUTTON' || event.target.tagName === 'SELECT') return;
   
   // Check for double-click emergency stop
@@ -455,47 +455,8 @@ document.addEventListener('mouseup', function(event) {
 // Make updateControlMethod global so it shows in UI
 window.updateControlMethod = updateControlMethod;
 
-// Mouse control toggle
+// Mouse control state - accessed from index.html
 let mouseControlEnabled = false;
-
-function toggleMouseControl() {
-  mouseControlEnabled = !mouseControlEnabled;
-  const toggleBtn = document.getElementById('mouseToggle');
-  toggleBtn.textContent = mouseControlEnabled ? 'Mouse: ON' : 'Mouse: OFF';
-  toggleBtn.style.background = mouseControlEnabled ? 'rgba(48, 209, 88, 0.3)' : 'rgba(255,255,255,0.1)';
-  
-  // Dim command buttons when mouse control is enabled
-  const commandBtns = document.querySelectorAll('.action-btn, .command-btn');
-  commandBtns.forEach(btn => {
-    if (mouseControlEnabled) {
-      btn.style.opacity = '0.3';
-      btn.style.pointerEvents = 'none';
-    } else {
-      btn.style.opacity = '1';
-      btn.style.pointerEvents = 'auto';
-    }
-  });
-  
-  if (mouseControlEnabled) {
-    logMessage('🖱️ Mouse control enabled - Command buttons disabled for safety');
-  } else {
-    logMessage('🖱️ Mouse control disabled - Command buttons enabled');
-    // Stop any ongoing mouse movement
-    if (mouseInterval) {
-      clearInterval(mouseInterval);
-      mouseInterval = null;
-    }
-    if (movementTimeout) {
-      clearTimeout(movementTimeout);
-      movementTimeout = null;
-    }
-    if (globalThis.rtc && globalThis.rtc.publishApi) {
-      globalThis.rtc.publishApi("rt/api/sport/request", 1008, JSON.stringify({x: 0, y: 0, z: 0}));
-    }
-  }
-}
-
-window.toggleMouseControl = toggleMouseControl;
 
 // Disable right-click context menu
 document.addEventListener('contextmenu', function(event) {

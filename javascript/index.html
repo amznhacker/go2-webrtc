@@ -707,8 +707,11 @@
         }
       }
 
+      // Mouse control state
+      window.mouseControlEnabled = false;
+      
       function quickCommand(cmdId) {
-        if (mouseControlEnabled) {
+        if (window.mouseControlEnabled) {
           logMessage("🖱️ Mouse control is ON - Command buttons disabled for safety");
           return;
         }
@@ -765,12 +768,38 @@
         panel.classList.toggle('open');
       }
       
+      function toggleMouseControl() {
+        window.mouseControlEnabled = !window.mouseControlEnabled;
+        const toggleBtn = document.getElementById('mouseToggle');
+        toggleBtn.textContent = window.mouseControlEnabled ? 'Mouse: ON' : 'Mouse: OFF';
+        toggleBtn.style.background = window.mouseControlEnabled ? 'rgba(48, 209, 88, 0.3)' : 'rgba(255,255,255,0.1)';
+        
+        // Dim command buttons when mouse control is enabled
+        const commandBtns = document.querySelectorAll('.action-btn, .command-btn');
+        commandBtns.forEach(btn => {
+          if (window.mouseControlEnabled) {
+            btn.style.opacity = '0.3';
+            btn.style.pointerEvents = 'none';
+          } else {
+            btn.style.opacity = '1';
+            btn.style.pointerEvents = 'auto';
+          }
+        });
+        
+        if (window.mouseControlEnabled) {
+          logMessage('🖱️ Mouse control enabled - Command buttons disabled for safety');
+        } else {
+          logMessage('🖱️ Mouse control disabled - Command buttons enabled');
+        }
+      }
+      
       // Make functions global
       window.updateConnectionStatus = updateConnectionStatus;
       window.quickCommand = quickCommand;
       window.startMove = startMove;
       window.stopMove = stopMove;
       window.toggleAllCommands = toggleAllCommands;
+      window.toggleMouseControl = toggleMouseControl;
       
 
 
