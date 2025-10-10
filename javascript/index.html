@@ -838,15 +838,21 @@
             const voices = speechSynthesis.getVoices();
             logMessage(`🔊 Available voices: ${voices.length}`);
             
-            // Try multiple female voice patterns
+            // Try multiple female voice patterns - prioritize known female names
             const femaleVoice = voices.find(voice => {
               const name = voice.name.toLowerCase();
-              const lang = voice.lang.toLowerCase();
               return (
                 // Explicit female indicators
                 voice.gender === 'female' ||
                 name.includes('female') ||
                 name.includes('woman') ||
+                // Microsoft female voices
+                name.includes('zira') ||
+                name.includes('sabina') ||
+                name.includes('caroline') ||
+                name.includes('nathalie') ||
+                name.includes('cortana') ||
+                name.includes('hazel') ||
                 // Common female voice names
                 name.includes('samantha') ||
                 name.includes('karen') ||
@@ -855,15 +861,11 @@
                 name.includes('allison') ||
                 name.includes('ava') ||
                 name.includes('serena') ||
-                name.includes('zira') ||
-                name.includes('hazel') ||
-                // Platform specific
-                (name.includes('google') && name.includes('female')) ||
-                (name.includes('microsoft') && name.includes('zira')) ||
-                // Default to first English voice if available
-                (lang.startsWith('en') && voices.indexOf(voice) < 3)
+                name.includes('siri') ||
+                // Google female voices
+                (name.includes('google') && name.includes('female'))
               );
-            });
+            }) || voices.find(voice => voice.lang.startsWith('en')); // Fallback to first English voice
             
             if (femaleVoice) {
               utterance.voice = femaleVoice;
