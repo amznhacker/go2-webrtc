@@ -576,7 +576,7 @@
         <button class="settings-btn" id="mouseToggle" onclick="toggleMouseControl()" style="width: auto; padding: 0 16px; font-size: 12px; font-weight: 600;">Mouse: OFF</button>
         <button class="settings-btn" id="detectionToggle" onclick="toggleDetection()" style="width: auto; padding: 0 16px; font-size: 12px; font-weight: 600;">AI: OFF</button>
         <button class="settings-btn" id="visionButton" onclick="analyzeScene()" style="width: auto; padding: 0 16px; font-size: 12px; font-weight: 600;">👁️ Vision</button>
-        <button class="settings-btn" id="voiceChatButton" onclick="toggleVoiceChat()" style="width: auto; padding: 0 16px; font-size: 12px; font-weight: 600;">🎤 Talk</button>
+
         <button class="settings-btn" id="settings-toggle">⚙️</button>
       </div>
 
@@ -699,6 +699,14 @@
         </div>
       </div>
 
+      <div class="form-group" style="margin-top: 20px;">
+        <label class="form-label" for="chat-input">Chat with Princess Peach</label>
+        <div style="display: flex; gap: 10px;">
+          <input type="text" id="chat-input" class="form-input" placeholder="Talk to Princess Peach..." style="flex: 1;" onkeypress="if(event.key==='Enter') chatWithPeach()">
+          <button id="chat-btn" class="btn" style="margin: 0; width: auto; padding: 16px 20px;" onclick="chatWithPeach()">Chat</button>
+        </div>
+      </div>
+
       <div class="log" id="log">
         <code class="log-code" id="log-code">Ready to connect...</code>
       </div>
@@ -737,74 +745,14 @@
       // OpenAI Vision state
       let isAnalyzing = false;
       
-      // Voice Chat state
-      let isListening = false;
-      let recognition = null;
-      
-      // Initialize speech recognition
-      function initSpeechRecognition() {
-        if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-          const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-          recognition = new SpeechRecognition();
-          recognition.continuous = false;
-          recognition.interimResults = false;
-          recognition.lang = 'en-US';
-          
-          recognition.onresult = function(event) {
-            const transcript = event.results[0][0].transcript;
-            logMessage(`🎤 You said: "${transcript}"`);
-            processVoiceCommand(transcript);
-          };
-          
-          recognition.onerror = function(event) {
-            logMessage(`❌ Speech recognition error: ${event.error}`);
-            stopListening();
-          };
-          
-          recognition.onend = function() {
-            stopListening();
-          };
-          
-          return true;
-        }
-        return false;
-      }
-      
-      function toggleVoiceChat() {
-        if (!recognition && !initSpeechRecognition()) {
-          logMessage('❌ Speech recognition not supported in this browser');
-          return;
-        }
+      async function chatWithPeach() {
+        const chatInput = document.getElementById('chat-input');
+        const message = chatInput.value.trim();
         
-        if (isListening) {
-          stopListening();
-        } else {
-          startListening();
-        }
-      }
-      
-      function startListening() {
-        isListening = true;
-        const voiceBtn = document.getElementById('voiceChatButton');
-        voiceBtn.textContent = '🔴 Listening...';
-        voiceBtn.style.background = 'rgba(255, 0, 0, 0.3)';
+        if (!message) return;
         
-        logMessage('🎤 Princess Peach is listening...');
-        recognition.start();
-      }
-      
-      function stopListening() {
-        isListening = false;
-        const voiceBtn = document.getElementById('voiceChatButton');
-        voiceBtn.textContent = '🎤 Talk';
-        voiceBtn.style.background = 'rgba(255,255,255,0.1)';
-        
-        if (recognition) {
-          recognition.stop();
-        }
-      }
-      
-      async function processVoiceCommand(transcript) {
+        chatInput.value = '';
+        logMessage(`💬 You: "${message}"`);
         const apiKey = document.getElementById('openai-key').value;
         if (!apiKey) {
           speakAsPeach('I need an OpenAI API key to understand you, your majesty!');
@@ -827,7 +775,7 @@
                 content: `You are Princess Peach, a royal robot dog with an elegant personality. You can perform these tricks: Stand (1004), Sit (1009), Hello (1016), Bow (1015), Dance (1022), Stretch (1017), Dance 2 (1023), Wag Tail (1018), Shake Hands (1028), Heart (1036), Jump (1031), and many more acrobatic moves. When asked to do a trick, respond with enthusiasm and mention the trick name. If asked about yourself, talk about being a royal robot dog. Be charming, elegant, and playful. Keep responses under 50 words.`
               }, {
                 role: 'user',
-                content: transcript
+                content: message
               }],
               max_tokens: 100
             })
@@ -844,7 +792,7 @@
           speakAsPeach(reply);
           
           // Check if a trick was requested and execute it
-          executeTrickFromText(transcript, reply);
+          executeTrickFromText(message, reply);
           
         } catch (error) {
           logMessage(`❌ Chat error: ${error.message}`);
@@ -1308,7 +1256,7 @@
       window.toggleDetection = toggleDetection;
       window.analyzeScene = analyzeScene;
       window.testOpenAIAPI = testOpenAIAPI;
-      window.toggleVoiceChat = toggleVoiceChat;
+      window.chatWithPeach = chatWithPeach;
       
 
 
