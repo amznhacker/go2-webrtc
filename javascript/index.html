@@ -362,11 +362,52 @@
       }
       
       .commands-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-        gap: 12px;
+        display: block;
         max-height: calc(60vh - 100px);
         overflow-y: auto;
+      }
+      
+      .category-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px 16px;
+        background: rgba(255,255,255,0.1);
+        border-radius: 8px;
+        margin: 8px 0 4px 0;
+        cursor: pointer;
+        transition: all 0.2s ease;
+      }
+      
+      .category-header:hover {
+        background: rgba(255,255,255,0.15);
+      }
+      
+      .category-header h3 {
+        font-size: 14px;
+        font-weight: 600;
+        margin: 0;
+      }
+      
+      .expand-icon {
+        font-size: 12px;
+        transition: transform 0.2s ease;
+      }
+      
+      .category-container {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+        gap: 8px;
+        margin-bottom: 12px;
+        padding: 0 8px;
+        max-height: 500px;
+        overflow: hidden;
+        transition: max-height 0.3s ease;
+      }
+      
+      .category-container.collapsed {
+        max-height: 0;
+        margin-bottom: 0;
       }
       
       .command-btn {
@@ -468,9 +509,9 @@
           padding: 20px;
         }
         
-        .commands-grid {
-          grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
-          gap: 10px;
+        .category-container {
+          grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+          gap: 8px;
         }
         
         .command-btn {
@@ -505,7 +546,7 @@
           padding: 6px 4px;
         }
         
-        .commands-grid {
+        .category-container {
           grid-template-columns: repeat(3, 1fr);
         }
       }
@@ -814,19 +855,91 @@
           1036: { name: 'Heart', icon: '💖' }
         };
         
-        Object.entries(commands).forEach(([id, cmd]) => {
-          const btn = document.createElement('button');
-          btn.className = 'command-btn';
-          btn.onclick = () => {
-            quickCommand(parseInt(id));
-            document.getElementById('all-commands-panel').classList.remove('open');
-          };
-          btn.innerHTML = `
-            <div class="command-icon">${cmd.icon}</div>
-            <div>${cmd.name}</div>
-          `;
-          grid.appendChild(btn);
+        const categories = {
+          'Popular': {
+            1004: { name: 'Stand Up', icon: '🐕' },
+            1009: { name: 'Sit Down', icon: '💺' },
+            1016: { name: 'Hello', icon: '👋' },
+            1015: { name: 'Bow', icon: '🙇' },
+            1022: { name: 'Dance 1', icon: '💃' },
+            1017: { name: 'Stretch', icon: '🤸' }
+          },
+          'Dances & Fun': {
+            1023: { name: 'Dance 2', icon: '🕺' },
+            1024: { name: 'Space Walk', icon: '🚀' },
+            1018: { name: 'Wag Tail', icon: '🐶' },
+            1025: { name: 'Chicken Head', icon: '🐔' },
+            1026: { name: 'Crab Steps', icon: '🦀' },
+            1036: { name: 'Heart', icon: '💖' },
+            1029: { name: 'Finger Heart', icon: '🤏' },
+            1028: { name: 'Shake Hands', icon: '🤝' }
+          },
+          'Acrobatics': {
+            1013: { name: 'Back Flip', icon: '🤸' },
+            1014: { name: 'Front Flip', icon: '🤸♂️' },
+            1032: { name: 'Front Somersault', icon: '🤸♀️' },
+            1033: { name: 'Right Somersault', icon: '🤸' },
+            1034: { name: 'Left Somersault', icon: '🤸♂️' },
+            1030: { name: 'Rainbow', icon: '🌈' },
+            1027: { name: 'Leg Lift', icon: '🦵' }
+          },
+          'Movement': {
+            1005: { name: 'Run Forward', icon: '🏃' },
+            1006: { name: 'Run Backward', icon: '🔙' },
+            1007: { name: 'Run Left', icon: '⬅️' },
+            1008: { name: 'Run Right', icon: '➡️' },
+            1035: { name: 'Turn Around', icon: '🔄' },
+            1011: { name: 'Switch Gait', icon: '🔄' }
+          },
+          'Body Moves': {
+            1019: { name: 'Trunk Wiggle', icon: '🐍' },
+            1020: { name: 'Butt Circle', icon: '🔄' },
+            1021: { name: 'Head Circle', icon: '🔄' },
+            1031: { name: 'Scrape', icon: '🧽' }
+          },
+          'Control': {
+            1001: { name: 'Damp', icon: '🚫' },
+            1002: { name: 'Balance Stand', icon: '⚖️' },
+            1003: { name: 'Stop Move', icon: '⏹️' },
+            1010: { name: 'Rise Sit', icon: '🐕' },
+            1012: { name: 'Trigger', icon: '🔫' }
+          }
+        };
+        
+        Object.entries(categories).forEach(([categoryName, commands]) => {
+          const header = document.createElement('div');
+          header.className = 'category-header';
+          header.innerHTML = `<h3>${categoryName}</h3><span class="expand-icon">▼</span>`;
+          header.onclick = () => toggleCategory(categoryName);
+          grid.appendChild(header);
+          
+          const container = document.createElement('div');
+          container.className = 'category-container';
+          container.id = `category-${categoryName}`;
+          if (categoryName !== 'Popular') container.classList.add('collapsed');
+          
+          Object.entries(commands).forEach(([id, cmd]) => {
+            const btn = document.createElement('button');
+            btn.className = 'command-btn';
+            btn.onclick = () => {
+              quickCommand(parseInt(id));
+              document.getElementById('all-commands-panel').classList.remove('open');
+            };
+            btn.innerHTML = `<div class="command-icon">${cmd.icon}</div><div>${cmd.name}</div>`;
+            container.appendChild(btn);
+          });
+          
+          grid.appendChild(container);
         });
+      }
+      
+      function toggleCategory(categoryName) {
+        const container = document.getElementById(`category-${categoryName}`);
+        const header = container.previousElementSibling;
+        const icon = header.querySelector('.expand-icon');
+        
+        container.classList.toggle('collapsed');
+        icon.textContent = container.classList.contains('collapsed') ? '▶' : '▼';
       }
     </script>
     <script type="module" src="index.js"></script>
