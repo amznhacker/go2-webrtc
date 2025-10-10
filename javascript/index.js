@@ -288,8 +288,9 @@ document.addEventListener('mouseup', function(event) {
 
 // Mouse wheel controls
 document.addEventListener('wheel', function(event) {
-  // Don't trigger if not connected or mouse control disabled
+  // Don't trigger if not connected, mouse control disabled, or not on video area
   if (!globalThis.rtc || !globalThis.rtc.publishApi || !window.mouseControlEnabled) return;
+  if (!event.target.closest('.video-background')) return;
   
   event.preventDefault();
   
@@ -393,9 +394,9 @@ function emergencyStop() {
 
 // Mouse click controls - hold to turn
 document.addEventListener('mousedown', function(event) {
-  // Don't trigger if not connected, mouse control disabled, or clicking on UI elements
+  // Don't trigger if not connected, mouse control disabled, or not on video area
   if (!globalThis.rtc || !globalThis.rtc.publishApi || !window.mouseControlEnabled) return;
-  if (event.target.tagName === 'INPUT' || event.target.tagName === 'BUTTON' || event.target.tagName === 'SELECT') return;
+  if (!event.target.closest('.video-background')) return;
   
   // Check for double-click emergency stop
   const currentTime = Date.now();
