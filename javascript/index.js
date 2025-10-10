@@ -464,10 +464,22 @@ function toggleMouseControl() {
   toggleBtn.textContent = mouseControlEnabled ? 'Mouse: ON' : 'Mouse: OFF';
   toggleBtn.style.background = mouseControlEnabled ? 'rgba(48, 209, 88, 0.3)' : 'rgba(255,255,255,0.1)';
   
+  // Dim command buttons when mouse control is enabled
+  const commandBtns = document.querySelectorAll('.action-btn, .command-btn');
+  commandBtns.forEach(btn => {
+    if (mouseControlEnabled) {
+      btn.style.opacity = '0.3';
+      btn.style.pointerEvents = 'none';
+    } else {
+      btn.style.opacity = '1';
+      btn.style.pointerEvents = 'auto';
+    }
+  });
+  
   if (mouseControlEnabled) {
-    logMessage('🖱️ Mouse control enabled');
+    logMessage('🖱️ Mouse control enabled - Command buttons disabled for safety');
   } else {
-    logMessage('🖱️ Mouse control disabled');
+    logMessage('🖱️ Mouse control disabled - Command buttons enabled');
     // Stop any ongoing mouse movement
     if (mouseInterval) {
       clearInterval(mouseInterval);
