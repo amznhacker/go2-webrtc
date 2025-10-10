@@ -327,32 +327,186 @@
         white-space: pre-wrap;
       }
       
+      /* All Commands Panel */
+      .all-commands-panel {
+        position: fixed;
+        bottom: -100%;
+        left: 0;
+        right: 0;
+        height: 60vh;
+        background: rgba(0,0,0,0.95);
+        backdrop-filter: blur(30px);
+        border-top: 1px solid rgba(255,255,255,0.2);
+        z-index: 50;
+        transition: bottom 0.3s ease;
+        overflow-y: auto;
+        padding: 20px;
+      }
+      
+      .all-commands-panel.open {
+        bottom: 0;
+      }
+      
+      .commands-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        padding-bottom: 15px;
+        border-bottom: 1px solid rgba(255,255,255,0.2);
+      }
+      
+      .commands-title {
+        font-size: 20px;
+        font-weight: 700;
+      }
+      
+      .commands-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+        gap: 12px;
+        max-height: calc(60vh - 100px);
+        overflow-y: auto;
+      }
+      
+      .command-btn {
+        background: rgba(255,255,255,0.1);
+        backdrop-filter: blur(15px);
+        border: 1px solid rgba(255,255,255,0.3);
+        border-radius: 12px;
+        color: #fff;
+        padding: 16px 12px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        text-align: center;
+        font-size: 10px;
+        font-weight: 600;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 6px;
+        min-height: 80px;
+      }
+      
+      .command-btn:active {
+        background: rgba(0,122,255,0.5);
+        transform: scale(0.95);
+      }
+      
+      .command-icon {
+        font-size: 24px;
+      }
+      
+      .more-btn {
+        background: rgba(255,255,255,0.2);
+        border: 2px solid rgba(255,255,255,0.4);
+        font-size: 20px;
+      }
+      
       /* Mobile Responsive */
       @media (max-width: 768px) {
+        .top-bar {
+          padding: 12px 15px;
+          flex-wrap: wrap;
+          gap: 8px;
+        }
+        
+        .status-badge {
+          font-size: 12px;
+          padding: 8px 12px;
+        }
+        
+        .settings-btn {
+          width: 40px;
+          height: 40px;
+          font-size: 14px;
+        }
+        
         .movement-panel {
-          width: calc(50vw - 30px);
-          height: 160px;
-          bottom: 15px;
-          left: 15px;
+          width: calc(50vw - 20px);
+          height: 140px;
+          bottom: 10px;
+          left: 10px;
+          padding: 12px;
         }
         
         .actions-panel {
-          width: calc(50vw - 30px);
-          bottom: 15px;
-          right: 15px;
+          width: calc(50vw - 20px);
+          bottom: 10px;
+          right: 10px;
+          padding: 12px;
+          max-height: 200px;
         }
         
         .actions-grid {
           grid-template-columns: repeat(2, 1fr);
+          gap: 8px;
         }
         
-        .top-bar {
-          padding: 15px;
+        .action-btn {
+          padding: 8px 6px;
+          font-size: 10px;
+          min-height: 50px;
         }
         
-        .settings-content {
-          margin: 20px auto;
-          padding: 24px;
+        .action-icon {
+          font-size: 16px;
+        }
+        
+        .actions-title {
+          font-size: 14px;
+          margin-bottom: 12px;
+        }
+        
+        .move-btn {
+          font-size: 14px;
+        }
+        
+        .settings-panel {
+          width: 100vw;
+          right: -100vw;
+          padding: 20px;
+        }
+        
+        .commands-grid {
+          grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+          gap: 10px;
+        }
+        
+        .command-btn {
+          padding: 12px 8px;
+          min-height: 70px;
+          font-size: 9px;
+        }
+        
+        .command-icon {
+          font-size: 20px;
+        }
+      }
+      
+      @media (max-width: 480px) {
+        .movement-panel, .actions-panel {
+          width: calc(100vw - 20px);
+          left: 10px;
+          right: 10px;
+        }
+        
+        .actions-panel {
+          bottom: 160px;
+          max-height: 120px;
+        }
+        
+        .actions-grid {
+          grid-template-columns: repeat(3, 1fr);
+        }
+        
+        .action-btn {
+          min-height: 45px;
+          padding: 6px 4px;
+        }
+        
+        .commands-grid {
+          grid-template-columns: repeat(3, 1fr);
         }
       }
     </style>
@@ -434,7 +588,22 @@
             <div class="action-icon">💖</div>
             <div>Heart</div>
           </button>
+          <button class="action-btn more-btn" onclick="toggleAllCommands()">
+            <div class="action-icon">⋯</div>
+            <div>More</div>
+          </button>
         </div>
+      </div>
+    </div>
+
+    <!-- All Commands Panel -->
+    <div class="all-commands-panel" id="all-commands-panel">
+      <div class="commands-header">
+        <h2 class="commands-title">All Commands</h2>
+        <button class="close-btn" id="commands-close">✕</button>
+      </div>
+      <div class="commands-grid" id="commands-grid">
+        <!-- Commands will be populated by JavaScript -->
       </div>
     </div>
 
@@ -545,11 +714,17 @@
         }
       }
 
+      function toggleAllCommands() {
+        const panel = document.getElementById('all-commands-panel');
+        panel.classList.toggle('open');
+      }
+      
       // Make functions global
       window.updateConnectionStatus = updateConnectionStatus;
       window.quickCommand = quickCommand;
       window.startMove = startMove;
       window.stopMove = stopMove;
+      window.toggleAllCommands = toggleAllCommands;
       
 
 
@@ -562,12 +737,20 @@
         const settingsPanel = document.getElementById('settings-panel');
         const settingsClose = document.getElementById('settings-close');
         
+        // All commands panel toggle
+        const commandsPanel = document.getElementById('all-commands-panel');
+        const commandsClose = document.getElementById('commands-close');
+        
         settingsToggle.addEventListener('click', function() {
           settingsPanel.classList.add('open');
         });
         
         settingsClose.addEventListener('click', function() {
           settingsPanel.classList.remove('open');
+        });
+        
+        commandsClose.addEventListener('click', function() {
+          commandsPanel.classList.remove('open');
         });
         
         // Close when clicking outside
@@ -577,8 +760,74 @@
               !settingsToggle.contains(e.target)) {
             settingsPanel.classList.remove('open');
           }
+          
+          if (commandsPanel.classList.contains('open') && 
+              !commandsPanel.contains(e.target) && 
+              !e.target.classList.contains('more-btn') &&
+              !e.target.closest('.more-btn')) {
+            commandsPanel.classList.remove('open');
+          }
         });
+        
+        // Populate all commands
+        populateAllCommands();
       });
+      
+      function populateAllCommands() {
+        const grid = document.getElementById('commands-grid');
+        const commands = {
+          1001: { name: 'Damp', icon: '🚫' },
+          1002: { name: 'Balance Stand', icon: '⚖️' },
+          1003: { name: 'Stop Move', icon: '⏹️' },
+          1004: { name: 'Stand Up', icon: '🐕' },
+          1005: { name: 'Run Forward', icon: '🏃' },
+          1006: { name: 'Run Backward', icon: '🔙' },
+          1007: { name: 'Run Left', icon: '⬅️' },
+          1008: { name: 'Run Right', icon: '➡️' },
+          1009: { name: 'Sit Down', icon: '💺' },
+          1010: { name: 'Rise Sit', icon: '🐕' },
+          1011: { name: 'Switch Gait', icon: '🔄' },
+          1012: { name: 'Trigger', icon: '🔫' },
+          1013: { name: 'Back Flip', icon: '🤸' },
+          1014: { name: 'Front Flip', icon: '🤸‍♂️' },
+          1015: { name: 'Bow', icon: '🙇' },
+          1016: { name: 'Hello', icon: '👋' },
+          1017: { name: 'Stretch', icon: '🤸' },
+          1018: { name: 'Wag Tail', icon: '🐶' },
+          1019: { name: 'Trunk Wiggle', icon: '🐍' },
+          1020: { name: 'Butt Circle', icon: '🔄' },
+          1021: { name: 'Head Circle', icon: '🔄' },
+          1022: { name: 'Dance 1', icon: '💃' },
+          1023: { name: 'Dance 2', icon: '🕺' },
+          1024: { name: 'Space Walk', icon: '🚀' },
+          1025: { name: 'Chicken Head', icon: '🐔' },
+          1026: { name: 'Crab Steps', icon: '🦀' },
+          1027: { name: 'Leg Lift', icon: '🦵' },
+          1028: { name: 'Shake Hands', icon: '🤝' },
+          1029: { name: 'Finger Heart', icon: '🤏' },
+          1030: { name: 'Rainbow', icon: '🌈' },
+          1031: { name: 'Scrape', icon: '🧽' },
+          1032: { name: 'Front Somersault', icon: '🤸‍♀️' },
+          1033: { name: 'Right Somersault', icon: '🤸' },
+          1034: { name: 'Left Somersault', icon: '🤸‍♂️' },
+          1035: { name: 'Turn Around', icon: '🔄' },
+          1036: { name: 'Heart', icon: '💖' }
+        };
+        
+        Object.entries(commands).forEach(([id, cmd]) => {
+          const btn = document.createElement('button');
+          btn.className = 'command-btn';
+          btn.onclick = () => {
+            quickCommand(parseInt(id));
+            document.getElementById('all-commands-panel').classList.remove('open');
+          };
+          btn.innerHTML = `
+            <div class="command-icon">${cmd.icon}</div>
+            <div>${cmd.name}</div>
+          `;
+          grid.appendChild(btn);
+        });
+      }
     </script>
     <script type="module" src="index.js"></script>
 
