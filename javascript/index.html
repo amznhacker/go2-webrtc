@@ -576,6 +576,7 @@
         <button class="settings-btn" id="mouseToggle" onclick="toggleMouseControl()" style="width: auto; padding: 0 16px; font-size: 12px; font-weight: 600;">Mouse: OFF</button>
         <button class="settings-btn" id="detectionToggle" onclick="toggleDetection()" style="width: auto; padding: 0 16px; font-size: 12px; font-weight: 600;">AI: OFF</button>
         <button class="settings-btn" id="visionButton" onclick="analyzeScene()" style="width: auto; padding: 0 16px; font-size: 12px; font-weight: 600;">👁️ Vision</button>
+        <button class="settings-btn" id="voiceChatButton" onclick="toggleVoiceChat()" style="width: auto; padding: 0 16px; font-size: 12px; font-weight: 600;">🎤 Talk</button>
         <button class="settings-btn" id="settings-toggle">⚙️</button>
       </div>
 
@@ -703,7 +704,7 @@
       </div>
       
       <div style="text-align: center; margin-top: 20px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.2); font-size: 12px; color: rgba(255,255,255,0.6);">
-        Version 1.7.0 - OpenAI Vision Analysis
+        Version 1.9.0 - Voice Conversation AI
       </div>
     </div>
 
@@ -735,6 +736,173 @@
       
       // OpenAI Vision state
       let isAnalyzing = false;
+      
+      // Voice Chat state
+      let isListening = false;
+      let recognition = null;
+      
+      // Initialize speech recognition
+      function initSpeechRecognition() {
+        if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+          const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+          recognition = new SpeechRecognition();
+          recognition.continuous = false;
+          recognition.interimResults = false;
+          recognition.lang = 'en-US';
+          
+          recognition.onresult = function(event) {
+            const transcript = event.results[0][0].transcript;
+            logMessage(`🎤 You said: "${transcript}"`);
+            processVoiceCommand(transcript);
+          };
+          
+          recognition.onerror = function(event) {
+            logMessage(`❌ Speech recognition error: ${event.error}`);
+            stopListening();
+          };
+          
+          recognition.onend = function() {
+            stopListening();
+          };
+          
+          return true;
+        }
+        return false;
+      }
+      
+      function toggleVoiceChat() {
+        if (!recognition && !initSpeechRecognition()) {
+          logMessage('❌ Speech recognition not supported in this browser');
+          return;
+        }
+        
+        if (isListening) {
+          stopListening();
+        } else {
+          startListening();
+        }
+      }
+      
+      function startListening() {
+        isListening = true;
+        const voiceBtn = document.getElementById('voiceChatButton');
+        voiceBtn.textContent = '🔴 Listening...';
+        voiceBtn.style.background = 'rgba(255, 0, 0, 0.3)';
+        
+        logMessage('🎤 Princess Peach is listening...');
+        recognition.start();
+      }
+      
+      function stopListening() {
+        isListening = false;
+        const voiceBtn = document.getElementById('voiceChatButton');
+        voiceBtn.textContent = '🎤 Talk';
+        voiceBtn.style.background = 'rgba(255,255,255,0.1)';
+        
+        if (recognition) {
+          recognition.stop();
+        }
+      }
+      
+      async function processVoiceCommand(transcript) {
+        const apiKey = document.getElementById('openai-key').value;
+        if (!apiKey) {
+          speakAsPeach('I need an OpenAI API key to understand you, your majesty!');
+          return;
+        }
+        
+        try {
+          logMessage('🤖 Princess Peach is thinking...');
+          
+          const response = await fetch('https://api.openai.com/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${apiKey}`
+            },
+            body: JSON.stringify({
+              model: 'gpt-4o',
+              messages: [{
+                role: 'system',
+                content: `You are Princess Peach, a royal robot dog with an elegant personality. You can perform these tricks: Stand (1004), Sit (1009), Hello (1016), Bow (1015), Dance (1022), Stretch (1017), Dance 2 (1023), Wag Tail (1018), Shake Hands (1028), Heart (1036), Jump (1031), and many more acrobatic moves. When asked to do a trick, respond with enthusiasm and mention the trick name. If asked about yourself, talk about being a royal robot dog. Be charming, elegant, and playful. Keep responses under 50 words.`
+              }, {
+                role: 'user',
+                content: transcript
+              }],
+              max_tokens: 100
+            })
+          });
+          
+          if (!response.ok) {
+            throw new Error(`API Error: ${response.status}`);
+          }
+          
+          const data = await response.json();
+          const reply = data.choices[0].message.content;
+          
+          logMessage(`👑 Princess Peach: "${reply}"`);
+          speakAsPeach(reply);
+          
+          // Check if a trick was requested and execute it
+          executeTrickFromText(transcript, reply);
+          
+        } catch (error) {
+          logMessage(`❌ Chat error: ${error.message}`);
+          speakAsPeach('Oh dear, I seem to have a royal headache. Please try again!');
+        }
+      }
+      
+      function executeTrickFromText(userText, peachReply) {
+        const text = (userText + ' ' + peachReply).toLowerCase();
+        
+        // Map common phrases to commands
+        const trickMap = {
+          'stand': 1004, 'stand up': 1004, 'get up': 1004,
+          'sit': 1009, 'sit down': 1009,
+          'hello': 1016, 'wave': 1016, 'hi': 1016,
+          'bow': 1015, 'curtsy': 1015,
+          'dance': 1022, 'dancing': 1022,
+          'stretch': 1017, 'stretching': 1017,
+          'wag': 1018, 'wag tail': 1018,
+          'shake hands': 1028, 'handshake': 1028,
+          'heart': 1036, 'love': 1036,
+          'jump': 1031, 'jumping': 1031
+        };
+        
+        for (const [phrase, commandId] of Object.entries(trickMap)) {
+          if (text.includes(phrase)) {
+            setTimeout(() => {
+              logMessage(`🎭 Performing trick: ${phrase}`);
+              quickCommand(commandId);
+            }, 2000); // Wait 2 seconds after speaking
+            break;
+          }
+        }
+      }
+      
+      function speakAsPeach(text) {
+        if ('speechSynthesis' in window) {
+          const utterance = new SpeechSynthesisUtterance(text);
+          
+          // Set female voice
+          const voices = speechSynthesis.getVoices();
+          const femaleVoice = voices.find(voice => 
+            voice.name.toLowerCase().includes('female') ||
+            voice.name.toLowerCase().includes('samantha') ||
+            voice.name.toLowerCase().includes('karen') ||
+            voice.name.toLowerCase().includes('victoria') ||
+            voice.gender === 'female'
+          );
+          
+          if (femaleVoice) {
+            utterance.voice = femaleVoice;
+          }
+          
+          utterance.rate = 0.8;
+          utterance.pitch = 1.2;
+          speechSynthesis.speak(utterance);
+        }
+      }
       
       async function loadDetectionModel() {
         try {
@@ -917,7 +1085,7 @@
                 role: 'user',
                 content: [{
                   type: 'text',
-                  text: 'Describe what you see in this image. Focus on objects, people, activities, and anything notable. Be concise but detailed.'
+                  text: 'You are Princess Peach, a royal robot dog with an elegant and refined personality. Describe what you see in this image with the grace and charm of a princess. Focus on objects, people, activities, and anything notable. Be concise but add a touch of royal flair to your observations. Use phrases like "I observe" or "How lovely" when appropriate.'
                 }, {
                   type: 'image_url',
                   image_url: { 
@@ -946,12 +1114,9 @@
           
           logMessage(`👁️ Vision Analysis: ${analysis}`);
           
-          // Speak the analysis
-          if ('speechSynthesis' in window) {
-            const utterance = new SpeechSynthesisUtterance(analysis);
-            utterance.rate = 0.9;
-            speechSynthesis.speak(utterance);
-          }
+          // Speak the analysis with Princess Peach personality
+          const princessResponse = `Oh my! ${analysis} How delightful!`;
+          speakAsPeach(princessResponse);
           
         } catch (error) {
           logMessage(`❌ Vision analysis failed: ${error.message}`);
@@ -1143,6 +1308,7 @@
       window.toggleDetection = toggleDetection;
       window.analyzeScene = analyzeScene;
       window.testOpenAIAPI = testOpenAIAPI;
+      window.toggleVoiceChat = toggleVoiceChat;
       
 
 

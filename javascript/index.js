@@ -74,7 +74,7 @@ function handleConnectClick() {
       connectBtn.innerHTML = "✅ Connected to Robot";
       connectBtn.disabled = false;
       updateConnectionStatus(true);
-      logMessage(`✅ Successfully connected to GO2!`);
+      logMessage(`✅ Princess Peach is online! Ready to serve, your majesty!`);
       logMessage(`🖱️ Mouse: Wheel=Forward/Back, Middle+Wheel=Strafe, Hold Clicks=Turn, Double-Click=STOP`);
       logMessage(`⌨️ Keyboard: WASD=Move, QE=Turn`);
       logMessage(`🎮 Xbox: Hold LB + sticks to move`);
