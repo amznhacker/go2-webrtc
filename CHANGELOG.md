@@ -2,6 +2,29 @@
 
 All notable changes to the GO2 WebRTC Princess Peach project will be documented in this file.
 
+## [2.0.1] - 2024-12-19
+
+### 🗺️ LIDAR 3D Visualization Added
+
+#### Added
+- **LIDAR Visualization Interface** (`lidar.html`)
+  - Real-time 3D point cloud mapping
+  - Voxel-based rendering with height-coded colors
+  - Interactive 3D controls (orbit, zoom, pan)
+  - Separate interface from main robot control
+  - WebRTC integration for LIDAR data streaming
+- **Documentation Updates**
+  - Added LIDAR features to all documentation
+  - Updated setup instructions for dual interfaces
+  - Enhanced feature descriptions
+
+#### Features
+- **Real-time Mapping**: Live 3D environment visualization
+- **Height Mapping**: Color-coded elevation (blue=low, red=high)
+- **Interactive View**: Mouse controls for 3D navigation
+- **Performance Stats**: FPS and rendering information
+- **Dual Interface**: Works alongside Princess Peach control
+
 ## [2.0.0] - 2024-12-19
 
 ### 🎉 Major Release - Complete AI Companion System

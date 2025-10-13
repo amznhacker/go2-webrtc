@@ -38,6 +38,13 @@
 - **Real-time Logging**: Shows detected text in console
 - **Multiple Languages**: Supports various text formats
 
+### LIDAR 3D Visualization
+- **Real-time Mapping**: 3D point cloud from robot's LIDAR sensor
+- **Voxel Rendering**: Colored 3D blocks representing environment
+- **Interactive View**: Orbit, zoom, and pan controls
+- **Height Mapping**: Color-coded elevation (blue=low, red=high)
+- **Separate Interface**: Independent from main robot control
+
 ### OpenAI Vision Analysis
 - **GPT-4o Integration**: Intelligent scene understanding
 - **Natural Descriptions**: Detailed analysis of surroundings
@@ -230,6 +237,7 @@ async function customAIResponse(prompt) {
 4. **Configure Settings**: Enter robot IP and optional API key
 5. **Connect**: Click "Connect to Robot"
 6. **Start Playing**: Use any control method to interact
+7. **LIDAR Mapping**: Click "🗺️ LIDAR Visualization" for 3D mapping
 
 ## 🔮 Future Possibilities
 

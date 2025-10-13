@@ -68,11 +68,15 @@ python3 server.py
 
 #### Access Web Interface
 ```
-# Open browser and navigate to:
+# Main robot control interface:
 http://raspberry-pi-ip:8000
+
+# LIDAR 3D visualization:
+http://raspberry-pi-ip:8000/lidar.html
 
 # Example:
 http://192.168.1.100:8000
+http://192.168.1.100:8000/lidar.html
 ```
 
 ## 🔧 Configuration

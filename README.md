@@ -41,6 +41,7 @@ python3 server.py
 - **Text Recognition**: OCR for reading signs and text
 - **Scene Analysis**: GPT-4 Vision for intelligent environment understanding
 - **Princess Peach AI**: Conversational companion with royal personality
+- **LIDAR Mapping**: Real-time 3D point cloud visualization
 
 ### 🎭 Interactive Companion
 - **36 Robot Commands**: From basic moves to complex acrobatics
@@ -113,6 +114,7 @@ http://your-raspberry-pi-ip:8000
 - **Control**: Use touch, keyboard, or controller
 - **Chat**: Type messages to Princess Peach
 - **Vision**: Click 👁️ for AI scene analysis
+- **LIDAR**: Click 🗺️ for 3D mapping visualization
 
 ## 📚 Documentation
 
