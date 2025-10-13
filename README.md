@@ -1,74 +1,242 @@
-# go2-webrtc - WebRTC API or Unitree GO2 Robots
+# 🤖 GO2 WebRTC - Princess Peach AI Robot Controller
 
-The `go2-webrtc` project provides a WebRTC API for Unitree GO2 Robots, enabling real-time communication and control over these robots through a web interface. This project simplifies the process of connecting to and controlling Unitree GO2 Robots by leveraging the WebRTC protocol for efficient, low-latency communication.
+**Transform your Unitree GO2 into an intelligent AI companion with real-time WebRTC control, computer vision, and conversational AI.**
 
-Go2's WebRTC API supports all models, including Go2 Air, Pro, and Edu versions.
+[![Version](https://img.shields.io/badge/version-1.9.0-blue.svg)](https://github.com/tfoldi/go2-webrtc)
+[![License](https://img.shields.io/badge/license-BSD--2--Clause-green.svg)](LICENSE)
+[![Platform](https://img.shields.io/badge/platform-Raspberry%20Pi-red.svg)](SETUP.md)
 
-There is another, more featureful Python API for GO2 (also via WebRTC) called `go2_webrtc_connect` built by the infamous @legion1581. It has video and audio support among many other cool features:  https://github.com/legion1581/go2_webrtc_connect
+## ✨ What Makes This Special
 
-## Features
+**Princess Peach** is not just a robot controller - it's a complete AI companion system that brings your Unitree GO2 to life with:
 
-- **WebRTC Integration**: Utilizes WebRTC to establish a real-time communication channel between the web client and the robot.
-- **User Interface**: Includes a simple web interface for connecting to the robot, sending commands, and viewing the robot's video stream.
-- **Command Execution**: Allows users to execute predefined commands on the robot, such as movement and action commands.
-- **Persistent Settings**: Saves connection settings (token and robot IP) in the browser's localStorage for easier reconnection.
+- 🎭 **AI Personality**: Chat with Princess Peach using natural language
+- 👁️ **Computer Vision**: Real-time object detection and scene analysis  
+- 🎤 **Voice Synthesis**: Natural female voice with royal personality
+- 🎮 **Multi-Input Control**: Touch, keyboard, Xbox controller, and mouse
+- 📱 **Mobile Optimized**: Works perfectly on phones and tablets
+- 🔒 **Secure WebRTC**: Direct peer-to-peer connection with your robot
 
-## Getting Started
+## 🚀 Quick Demo
 
-To get started with `go2-webrtc`, clone this repository and serve the `index.html` file from the backend server (`server.py`) to a modern web browser. Ensure that your Unitree GO2 Robot is powered on and connected to the same network as your computer.
-
+```bash
+# Clone and run in 3 commands
+git clone https://github.com/tfoldi/go2-webrtc.git
+cd go2-webrtc/javascript  
+python3 server.py
+# Open http://your-pi-ip:8000
 ```
-git clone https://github.com/tfoldi/go2-webrtc
+
+## 🎯 Core Features
+
+### 🎮 Advanced Control Systems
+- **Touch Controls**: Mobile-optimized directional pad and action buttons
+- **Keyboard**: WASD movement + QE rotation
+- **Xbox Controller**: LB + analog sticks for precise control
+- **Smart Mouse**: Wheel/click controls with safety zones
+- **Emergency Stop**: Double-click anywhere for immediate halt
+
+### 🤖 AI & Computer Vision
+- **Object Detection**: Real-time recognition of 80+ object types
+- **Text Recognition**: OCR for reading signs and text
+- **Scene Analysis**: GPT-4 Vision for intelligent environment understanding
+- **Princess Peach AI**: Conversational companion with royal personality
+
+### 🎭 Interactive Companion
+- **36 Robot Commands**: From basic moves to complex acrobatics
+- **Natural Conversation**: Chat with Princess Peach via text
+- **Voice Responses**: High-quality female voice synthesis
+- **Trick Performance**: AI automatically performs requested actions
+- **Personality**: Elegant, charming, and playful royal character
+
+### 🛠️ Technical Excellence
+- **WebRTC**: Low-latency real-time video and control
+- **Responsive Design**: Works on any screen size
+- **Smart UI**: Glassmorphism design with intuitive controls
+- **Safety Features**: Multiple failsafes and emergency stops
+- **Cross-Platform**: Runs on any modern browser
+
+## 🎪 What Can Princess Peach Do?
+
+### Basic Interactions
+```
+You: "Hello Princess Peach!"
+Peach: "Oh my! Hello there, your majesty! How delightful to see you!"
+*waves gracefully*
+
+You: "Can you dance for me?"
+Peach: "Of course! I shall perform my royal dance just for you!"
+*performs elegant dance routine*
+```
+
+### Advanced AI Features
+```
+You: *clicks Vision button*
+Peach: "I observe a lovely living room with a comfortable sofa, 
+        a coffee table with books, and beautiful natural lighting 
+        streaming through the windows. How delightful!"
+
+You: "What do you see now?"
+Peach: "I can see a person sitting at a desk with a computer. 
+        There are also some plants nearby - how lovely!"
+```
+
+## 🚀 Quick Start
+
+### 1. Hardware Setup
+- **Unitree GO2** (Air, Pro, or Edu)
+- **Raspberry Pi 4** (2GB+ RAM)
+- **Same Network** (Pi and robot)
+
+### 2. Software Installation
+```bash
+# On Raspberry Pi
+git clone https://github.com/tfoldi/go2-webrtc.git
 cd go2-webrtc
-pip install -r python/requirements.txt
+pip3 install -r python/requirements.txt
 cd javascript
-python ./server.py
+python3 server.py
 ```
 
-## Sample Frontend Application
-The [javascript](https://github.com/tfoldi/go2-webrtc/tree/master/javascript) folder contains a sample frontend application that demonstrates how to use the JS WebRTC API to connect to and control the Unitree GO2 Robots. Explore the [javascript](https://github.com/tfoldi/go2-webrtc/tree/master/javascript) folder for more details and examples.
-
-## Python API for Backend/Console Applications
-For backend or console applications, the [python](https://github.com/tfoldi/go2-webrtc/tree/master/python) folder provides a Python API that interfaces with the Unitree GO2 Robots. This API is ideal for developers looking to integrate robot control into their Python applications or scripts. Check out the [python](https://github.com/tfoldi/go2-webrtc/tree/master/python) folder for documentation and examples.
-
-### Prerequisites
-
-- A Unitree GO2 Robot accessible over the local network. All models supported including Air, Pro and Edu
-- Local network connection (`STA-L`) to the robot
-
-### Obtaining security token
-
-Connecting to your device without a security token is possible and might allow a connection to be established. However, this method limits you to a single active connection at any time. To simultaneously use multiple clients, such as a WebRTC-based application and a phone app, a valid security token is necessary. This ensures secure, multi-client access to your device.
-
-One way is to sniff the traffic between the dog and your phone. Assuming that you have Linux or Mac:
-
-1. Run `tinyproxy` or any other HTTP proxy on your computer
-2. Set your computer's IP and port as HTTP proxy on your phone
-3. Run wireshark or `ngrep` on your box sniffing port 8081 `like ngrep port 8081`.
-4. Look for the token in the TCP stream after you connect your phone to the dog via the app
-
-The token looks like this in the request payload:
-
+### 3. Web Interface
 ```
-{
-    "token": "eyJ0eXAiOizI1NiJtlbiI[..]CI6MTcwODAxMzUwOX0.hiWOd9tNCIPzOOLNA",
-    "sdp": "v=0\r\no=- ",
-    "id": "STA_localNetwork",
-    "type": "offer"
-}
+# Open browser to:
+http://your-raspberry-pi-ip:8000
+
+# Configure in settings:
+- Robot IP: 192.168.1.xxx
+- OpenAI API Key: sk-... (optional)
 ```
 
-Another option is to obtain token via the `/login/email` endpoint.
+### 4. Start Playing!
+- **Connect**: Click "Connect to Robot"
+- **Control**: Use touch, keyboard, or controller
+- **Chat**: Type messages to Princess Peach
+- **Vision**: Click 👁️ for AI scene analysis
+
+## 📚 Documentation
+
+- **[📖 Complete Setup Guide](SETUP.md)** - Detailed installation and configuration
+- **[🎮 Features Guide](FEATURES.md)** - All capabilities and use cases  
+- **[🔧 API Reference](python/README.md)** - Python backend documentation
+- **[🚨 Troubleshooting](SETUP.md#troubleshooting)** - Common issues and solutions
+
+## 🎯 Use Cases
+
+### 🏠 Home Companion
+- Interactive pet that responds to voice and gestures
+- Security monitoring with AI scene analysis
+- Entertainment with dances, tricks, and conversations
+- Educational tool for learning robotics and AI
+
+### 🔬 Development Platform
+- WebRTC application development
+- Computer vision experimentation
+- AI integration testing
+- Custom command development
+
+### 🎓 Educational
+- STEM learning with hands-on robotics
+- AI and machine learning demonstrations
+- Programming and software development
+- Human-robot interaction research
+
+## 🎮 Control Methods
+
+| Method | Description | Best For |
+|--------|-------------|----------|
+| 📱 **Touch** | Mobile-optimized directional pad | Phones, tablets |
+| ⌨️ **Keyboard** | WASD + QE controls | Desktop, laptop |
+| 🎮 **Xbox Controller** | LB + analog sticks | Gaming, precision |
+| 🖱️ **Mouse** | Wheel + click controls | Desktop (optional) |
+
+## 🤖 AI Capabilities
+
+| Feature | Technology | Description |
+|---------|------------|-------------|
+| 👁️ **Object Detection** | TensorFlow.js | Real-time recognition of 80+ objects |
+| 📝 **Text Recognition** | Tesseract.js | OCR for reading signs and text |
+| 🧠 **Scene Analysis** | GPT-4 Vision | Intelligent environment understanding |
+| 💬 **Conversation** | GPT-4o | Natural language chat with Princess Peach |
+| 🎤 **Voice Synthesis** | Web Speech API | High-quality female voice responses |
+
+## 🎭 Princess Peach Commands
+
+### Popular Commands
+- **Stand** - Basic standing position
+- **Sit** - Sitting position  
+- **Hello** - Greeting wave
+- **Bow** - Royal curtsy
+- **Dance** - Elegant dance routine
+- **Stretch** - Graceful stretching
+
+### Advanced Tricks
+- **Acrobatics**: Flips, jumps, somersaults
+- **Social**: Handshakes, heart gestures
+- **Playful**: Tail wagging, head movements
+- **Custom**: 36 total commands available
+
+*See [FEATURES.md](FEATURES.md) for complete command list*
+
+## 🛠️ Technical Architecture
 
 ```
-curl -vX POST https://global-robot-api.unitree.com/login/email -d "email=<EMAIL>&password=<MD5 hash of your password>"
+go2-webrtc/
+├── javascript/           # Web interface (Princess Peach UI)
+│   ├── index.html       # Main application
+│   ├── index.js         # Core functionality
+│   ├── go2webrtc.js     # WebRTC connection
+│   ├── constants.js     # Robot commands
+│   └── server.py        # WebRTC signaling server
+├── python/              # Backend API
+│   └── go2_webrtc/      # Python package
+└── docs/                # Documentation
 ```
 
-## Development
+## 🤝 Contributing
 
-This project is structured around several key JavaScript files for the frontend and a Python package for backend or console applications. To contribute or modify the project, refer to these resources for implementing additional features or improving the existing codebase. PRs are welcome.
+We welcome contributions! Here's how you can help:
 
+- 🐛 **Bug Reports**: Found an issue? Create a GitHub issue
+- 💡 **Feature Requests**: Have an idea? Let us know!
+- 🔧 **Code Contributions**: Submit pull requests
+- 📚 **Documentation**: Help improve our guides
+- 🎨 **UI/UX**: Design improvements welcome
 
-## License
+### Development Setup
+```bash
+git clone https://github.com/your-username/go2-webrtc.git
+cd go2-webrtc
+# Make your changes
+# Test thoroughly
+# Submit pull request
+```
 
-This project is licensed under the BSD 2-clause License - see the [LICENSE](https://github.com/tfoldi/go2-webrtc/blob/master/LICENSE) file for details.
+## 🔗 Related Projects
+
+- **[go2_webrtc_connect](https://github.com/legion1581/go2_webrtc_connect)** by @legion1581 - Alternative Python API with additional features
+- **[Unitree SDK](https://github.com/unitreerobotics)** - Official Unitree development resources
+
+## 🌟 Acknowledgments
+
+- **Unitree Robotics** - For creating amazing robots
+- **@legion1581** - For the original `go2_webrtc_connect` inspiration
+- **OpenAI** - For GPT-4 Vision API
+- **TensorFlow.js** - For browser-based AI
+- **WebRTC Community** - For real-time communication standards
+
+## 📄 License
+
+This project is licensed under the BSD 2-Clause License - see the [LICENSE](LICENSE) file for details.
+
+## 🚀 What's Next?
+
+- 🎤 **Voice Commands**: Speech-to-text control
+- 🗺️ **Autonomous Navigation**: AI-powered pathfinding  
+- 🏠 **Home Integration**: IoT device control
+- 📱 **Mobile App**: Native mobile application
+- 🤖 **Multi-Robot**: Control multiple GO2 units
+
+---
+
+**Ready to meet Princess Peach? [Get Started Now!](SETUP.md)** 👑🤖✨
