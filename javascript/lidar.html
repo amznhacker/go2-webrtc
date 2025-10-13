@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>GO2 LIDAR Visualization</title>
+  <style>
+    body {
+      margin: 0;
+      background: #000;
+      color: #fff;
+      font-family: 'Inter', sans-serif;
+      overflow: hidden;
+    }
+    
+    .ui-overlay {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      z-index: 100;
+      background: rgba(0,0,0,0.8);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 12px;
+      padding: 20px;
+      min-width: 250px;
+    }
+    
+    .title {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 15px;
+      color: #fff;
+    }
+    
+    .status {
+      margin-bottom: 10px;
+      font-size: 14px;
+    }
+    
+    .connected { color: #30d158; }
+    .disconnected { color: #ff3b30; }
+    
+    .controls {
+      margin-top: 15px;
+    }
+    
+    .btn {
+      background: linear-gradient(135deg, #007AFF 0%, #0056b3 100%);
+      color: #fff;
+      border: none;
+      padding: 10px 16px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-right: 10px;
+      margin-bottom: 10px;
+    }
+    
+    .btn:hover {
+      transform: translateY(-1px);
+    }
+    
+    .input {
+      width: 100%;
+      padding: 10px;
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 8px;
+      color: #fff;
+      font-size: 14px;
+      margin-bottom: 10px;
+    }
+    
+    .stats {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 100;
+    }
+  </style>
+</head>
+<body>
+  <div class="ui-overlay">
+    <div class="title">🗺️ LIDAR Visualization</div>
+    <div class="status" id="status">
+      <span class="disconnected">● Disconnected</span>
+    </div>
+    <input type="text" id="robot-ip" class="input" placeholder="Robot IP (192.168.1.xxx)" />
+    <input type="text" id="token" class="input" placeholder="Security Token (optional)" />
+    <div class="controls">
+      <button class="btn" id="connect-btn" onclick="connectToRobot()">Connect</button>
+      <button class="btn" onclick="window.location.href='index.html'">← Robot Control</button>
+    </div>
+    <div style="margin-top: 15px; font-size: 12px; color: rgba(255,255,255,0.7);">
+      <div>• Mouse: Orbit view</div>
+      <div>• Wheel: Zoom in/out</div>
+      <div>• LIDAR data updates in real-time</div>
+    </div>
+  </div>
+
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.156.0/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.156.0/examples/jsm/"
+      }
+    }
+  </script>
+  
+  <script src="./md5.js"></script>
+  <script type="module" src="lidar.js"></script>
+</body>
+</html>
