@@ -212,25 +212,9 @@ class Go2Connection:
                     logger.info("Failed to get answer from server")
 
     async def connect_robot(self):
-        # Try old method first since new firmware broke encryption
-        logger.info("Trying old firmware method first...")
-        try:
-            return await self.connect_robot_v10()
-        except Exception as e:
-            logger.info(f"Old method failed: {e}")
-            
-        # Only try new method if old fails
-        logger.info("Trying new method as fallback...")
-        try:
-            offer = await self.pc.createOffer()
-            await self.pc.setLocalDescription(offer)
-            sdp_offer = self.pc.localDescription
-            peer_answer = Go2Connection.get_peer_answer(sdp_offer, self.token, self.ip)
-            answer = RTCSessionDescription(sdp=peer_answer["sdp"], type=peer_answer["type"])
-            await self.pc.setRemoteDescription(answer)
-        except Exception as e2:
-            logger.error(f"Both methods failed: {e}, {e2}")
-            raise Exception("Unable to connect with either method")
+        # Force old firmware method only - new method is broken
+        logger.info("Using old firmware method only (port 8081)...")
+        return await self.connect_robot_v10()
 
     @staticmethod
     def get_peer_answer(sdp_offer, token, robot_ip):
