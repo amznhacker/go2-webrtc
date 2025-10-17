@@ -274,10 +274,22 @@ class Go2Connection:
             # Generate AES key
             aes_key = Go2Connection.generate_aes_key()
 
-            # Try unencrypted communication first (new firmware might not need encryption)
-            logger.info("Trying unencrypted communication with new firmware...")
-            body = new_sdp
-            logger.debug("Sending raw SDP without encryption")
+            # Load and use the robot's actual RSA key for encryption
+            try:
+                public_key = Go2Connection.rsa_load_public_key(public_key_pem)
+                logger.info(f"Successfully loaded robot's RSA key: {public_key.size_in_bits()} bits")
+                
+                # Encrypt using robot's actual key
+                body = {
+                    "data1": Go2Connection.aes_encrypt(new_sdp, aes_key),
+                    "data2": Go2Connection.rsa_encrypt(aes_key, public_key),
+                }
+                logger.debug("Using robot's RSA key for encryption")
+            except Exception as e:
+                logger.error(f"Failed to use robot's key: {e}")
+                # Fallback to unencrypted
+                body = new_sdp
+                logger.debug("Fallback to unencrypted SDP")
 
             # URL for the second request
             url = f"http://{robot_ip}:9991/con_ing_{path_ending}"
