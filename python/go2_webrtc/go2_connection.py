@@ -277,17 +277,20 @@ class Go2Connection:
             headers = {"Content-Type": "application/x-www-form-urlencoded"}
 
             # Send the encrypted data via POST
+            logger.debug(f"Sending encrypted data to: {url}")
+            logger.debug(f"Body length: {len(json.dumps(body))}")
             response = Go2Connection.make_local_request(
                 url, body=json.dumps(body), headers=headers
             )
 
             # If response is successful, decrypt it
             if response:
+                logger.debug(f"Got response: {response.status_code}")
                 decrypted_response = Go2Connection.aes_decrypt(response.text, aes_key)
                 peer_answer = json.loads(decrypted_response)
-
                 return peer_answer
             else:
+                logger.error(f"No response from robot at {url}")
                 raise ValueError(f"Failed to get answer from server")
 
         else:
@@ -455,18 +458,20 @@ class Go2Connection:
     @staticmethod
     def make_local_request(path, body=None, headers=None):
         try:
+            logger.debug(f"Making request to: {path}")
             # Send POST request with provided path, body, and headers
-            response = requests.post(url=path, data=body, headers=headers)
+            response = requests.post(url=path, data=body, headers=headers, timeout=10)
+            logger.debug(f"Response status: {response.status_code}")
             # Check if the request was successful (status code 200)
             response.raise_for_status()  # Raises an HTTPError for bad responses (4xx, 5xx)
             if response.status_code == 200:
                 return response  # Returning the whole response object if needed
             else:
-                # Handle non-200 responses
+                logger.warning(f"Non-200 response: {response.status_code}")
                 return None
         except requests.exceptions.RequestException as e:
             # Handle any exception related to the request (e.g., connection errors, timeouts)
-            logging.error(f"An error occurred: {e}")
+            logger.error(f"An error occurred: {e}")
             return None
 
 
