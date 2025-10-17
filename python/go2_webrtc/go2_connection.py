@@ -263,10 +263,10 @@ class Go2Connection:
             data1 = decoded_json.get("data1")
             data2 = decoded_json.get("data2", "")
             logger.debug(f"Data1 length: {len(data1)}, first 50 chars: {data1[:50]}")
-            logger.debug(f"Data2 length: {len(data2)}, first 50 chars: {data2[:50] if data2 else 'empty'}")
+            logger.debug(f"Data2 type: {type(data2)}, value: {data2}")
 
             # Try data2 as the public key first, then data1
-            public_key_pem = data2 if data2 else data1[10 : len(data1) - 10]
+            public_key_pem = str(data2) if data2 and isinstance(data2, str) else data1[10 : len(data1) - 10]
             logger.debug(f"Using key from data{'2' if data2 else '1'}, length: {len(public_key_pem)}")
             path_ending = Go2Connection.calc_local_path_ending(data1)
             logger.debug(f"Calculated path ending: {path_ending}")
