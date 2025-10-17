@@ -388,20 +388,37 @@ class Go2Connection:
 
     @staticmethod
     def rsa_load_public_key(pem_data: str) -> RSA.RsaKey:
-        """Load an RSA public key from robot's format."""
+        """Load an RSA public key from a PEM-formatted string."""
+        logger.debug(f"Attempting to load RSA key: {pem_data[:50]}...")
+        
+        # Try direct base64 decode first
         try:
-            # Robot sends raw DER format encoded in base64
-            key_bytes = base64.b64decode(pem_data + '==')  # Add padding if needed
-            return RSA.import_key(key_bytes)
-        except:
-            try:
-                # Try without extra padding
-                key_bytes = base64.b64decode(pem_data)
-                return RSA.import_key(key_bytes)
-            except:
-                # Skip encryption for now - return dummy key
-                key = RSA.generate(1024)
-                return key.publickey()
+            key_bytes = base64.b64decode(pem_data)
+            key = RSA.import_key(key_bytes)
+            logger.debug("Successfully loaded RSA key with base64 decode")
+            return key
+        except Exception as e:
+            logger.debug(f"Base64 decode failed: {e}")
+        
+        # Try as PEM format
+        try:
+            pem_formatted = f"-----BEGIN PUBLIC KEY-----\n{pem_data}\n-----END PUBLIC KEY-----"
+            key = RSA.import_key(pem_formatted)
+            logger.debug("Successfully loaded RSA key as PEM format")
+            return key
+        except Exception as e:
+            logger.debug(f"PEM format failed: {e}")
+        
+        # Try as raw string
+        try:
+            key = RSA.import_key(pem_data)
+            logger.debug("Successfully loaded RSA key as raw string")
+            return key
+        except Exception as e:
+            logger.debug(f"Raw string failed: {e}")
+            
+        logger.error(f"All RSA key loading methods failed for key: {pem_data[:100]}...")
+        raise ValueError(f"RSA key format is not supported")
 
     @staticmethod
     def pad(data: str) -> bytes:
