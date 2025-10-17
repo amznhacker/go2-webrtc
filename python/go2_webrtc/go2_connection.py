@@ -348,8 +348,11 @@ class Go2Connection:
 
     @staticmethod
     def calc_local_path_ending(data1):
-        # Initialize an array of strings
-        strArr = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J"]
+        # Initialize an array of strings - expanded to include more characters
+        strArr = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", 
+                  "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", 
+                  "U", "V", "W", "X", "Y", "Z", "0", "1", "2", "3", 
+                  "4", "5", "6", "7", "8", "9", "+", "/", "="]
 
         # Extract the last 10 characters of data1
         last_10_chars = data1[-10:]
@@ -366,10 +369,11 @@ class Go2Connection:
                 second_char = chunk[1]
                 try:
                     index = strArr.index(second_char)
-                    arrayList.append(index)
+                    arrayList.append(index % 10)  # Use modulo to keep within 0-9 range
                 except ValueError:
-                    # Handle case where the character is not found in strArr
-                    print(f"Character {second_char} not found in strArr.")
+                    # Handle case where the character is not found - use hash fallback
+                    logger.warning(f"Character {second_char} not found in strArr, using hash fallback")
+                    arrayList.append(ord(second_char) % 10)
 
         # Convert arrayList to a string without separators
         joinToString = "".join(map(str, arrayList))
@@ -385,8 +389,24 @@ class Go2Connection:
     @staticmethod
     def rsa_load_public_key(pem_data: str) -> RSA.RsaKey:
         """Load an RSA public key from a PEM-formatted string."""
-        key_bytes = base64.b64decode(pem_data)
-        return RSA.import_key(key_bytes)
+        try:
+            # Try direct base64 decode first
+            key_bytes = base64.b64decode(pem_data)
+            return RSA.import_key(key_bytes)
+        except Exception as e1:
+            logger.warning(f"Failed to load key with base64 decode: {e1}")
+            try:
+                # Try as PEM format directly
+                pem_formatted = f"-----BEGIN PUBLIC KEY-----\n{pem_data}\n-----END PUBLIC KEY-----"
+                return RSA.import_key(pem_formatted)
+            except Exception as e2:
+                logger.warning(f"Failed to load key as PEM: {e2}")
+                try:
+                    # Try as raw string
+                    return RSA.import_key(pem_data)
+                except Exception as e3:
+                    logger.error(f"All RSA key loading methods failed: {e1}, {e2}, {e3}")
+                    raise ValueError(f"RSA key format is not supported: {pem_data[:50]}...")
 
     @staticmethod
     def pad(data: str) -> bytes:
