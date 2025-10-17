@@ -274,21 +274,10 @@ class Go2Connection:
             # Generate AES key
             aes_key = Go2Connection.generate_aes_key()
 
-            # Load Public Key
-            try:
-                public_key = Go2Connection.rsa_load_public_key(public_key_pem)
-                
-                # Encrypt the SDP and AES key
-                body = {
-                    "data1": Go2Connection.aes_encrypt(new_sdp, aes_key),
-                    "data2": Go2Connection.rsa_encrypt(aes_key, public_key),
-                }
-                logger.debug("Using encrypted communication")
-            except Exception as e:
-                logger.warning(f"Encryption failed: {e}, trying without encryption")
-                # Skip encryption entirely - send raw SDP
-                body = new_sdp
-                logger.debug("Sending raw SDP without encryption")
+            # Try unencrypted communication first (new firmware might not need encryption)
+            logger.info("Trying unencrypted communication with new firmware...")
+            body = new_sdp
+            logger.debug("Sending raw SDP without encryption")
 
             # URL for the second request
             url = f"http://{robot_ip}:9991/con_ing_{path_ending}"
