@@ -259,13 +259,15 @@ class Go2Connection:
             decoded_json = json.loads(decoded_response)
             logger.debug(f"Decoded JSON keys: {decoded_json.keys()}")
 
-            # Extract the 'data1' field from the JSON
+            # Extract both data1 and data2 fields
             data1 = decoded_json.get("data1")
+            data2 = decoded_json.get("data2", "")
             logger.debug(f"Data1 length: {len(data1)}, first 50 chars: {data1[:50]}")
+            logger.debug(f"Data2 length: {len(data2)}, first 50 chars: {data2[:50] if data2 else 'empty'}")
 
-            # Extract the public key from 'data1'
-            public_key_pem = data1[10 : len(data1) - 10]
-            logger.debug(f"Extracted key length: {len(public_key_pem)}, first 50: {public_key_pem[:50]}")
+            # Try data2 as the public key first, then data1
+            public_key_pem = data2 if data2 else data1[10 : len(data1) - 10]
+            logger.debug(f"Using key from data{'2' if data2 else '1'}, length: {len(public_key_pem)}")
             path_ending = Go2Connection.calc_local_path_ending(data1)
             logger.debug(f"Calculated path ending: {path_ending}")
 
@@ -283,13 +285,10 @@ class Go2Connection:
                 }
                 logger.debug("Using encrypted communication")
             except Exception as e:
-                logger.warning(f"Encryption failed: {e}, trying unencrypted")
-                # Try sending unencrypted data as fallback
-                body = {
-                    "data1": new_sdp,
-                    "data2": aes_key,
-                }
-                logger.debug("Using unencrypted communication as fallback")
+                logger.warning(f"Encryption failed: {e}, trying without encryption")
+                # Skip encryption entirely - send raw SDP
+                body = new_sdp
+                logger.debug("Sending raw SDP without encryption")
 
             # URL for the second request
             url = f"http://{robot_ip}:9991/con_ing_{path_ending}"
@@ -297,12 +296,20 @@ class Go2Connection:
             # Set the appropriate headers for URL-encoded form data
             headers = {"Content-Type": "application/x-www-form-urlencoded"}
 
-            # Send the encrypted data via POST
-            logger.debug(f"Sending encrypted data to: {url}")
-            logger.debug(f"Body length: {len(json.dumps(body))}")
-            response = Go2Connection.make_local_request(
-                url, body=json.dumps(body), headers=headers
-            )
+            # Send the data via POST
+            logger.debug(f"Sending data to: {url}")
+            if isinstance(body, str):
+                # Raw SDP
+                logger.debug(f"Sending raw SDP, length: {len(body)}")
+                response = Go2Connection.make_local_request(
+                    url, body=body, headers={"Content-Type": "text/plain"}
+                )
+            else:
+                # JSON encrypted data
+                logger.debug(f"Sending JSON body, length: {len(json.dumps(body))}")
+                response = Go2Connection.make_local_request(
+                    url, body=json.dumps(body), headers=headers
+                )
 
             # If response is successful, decrypt it
             if response:
