@@ -248,6 +248,10 @@ class Go2Connection:
         new_sdp = json.dumps(sdp_offer_json)
         url = f"http://{robot_ip}:9991/con_notify"
         response = Go2Connection.make_local_request(url, body=None, headers=None)
+        
+        # Add delay to avoid rate limiting between requests
+        import time
+        time.sleep(1)
 
         if response:
             logger.debug(f"Initial response: {response.text[:200]}...")
@@ -525,23 +529,42 @@ class Go2Connection:
         return decrypted_data
 
     @staticmethod
-    def make_local_request(path, body=None, headers=None):
-        try:
-            logger.debug(f"Making request to: {path}")
-            # Send POST request with provided path, body, and headers
-            response = requests.post(url=path, data=body, headers=headers, timeout=10)
-            logger.debug(f"Response status: {response.status_code}")
-            # Check if the request was successful (status code 200)
-            response.raise_for_status()  # Raises an HTTPError for bad responses (4xx, 5xx)
-            if response.status_code == 200:
-                return response  # Returning the whole response object if needed
-            else:
-                logger.warning(f"Non-200 response: {response.status_code}")
-                return None
-        except requests.exceptions.RequestException as e:
-            # Handle any exception related to the request (e.g., connection errors, timeouts)
-            logger.error(f"An error occurred: {e}")
-            return None
+    def make_local_request(path, body=None, headers=None, retries=3):
+        import time
+        
+        for attempt in range(retries):
+            try:
+                logger.debug(f"Making request to: {path} (attempt {attempt + 1})")
+                # Add delay to avoid rate limiting
+                if attempt > 0:
+                    delay = 2 ** attempt  # Exponential backoff
+                    logger.debug(f"Waiting {delay}s before retry...")
+                    time.sleep(delay)
+                
+                # Send POST request with provided path, body, and headers
+                response = requests.post(url=path, data=body, headers=headers, timeout=15)
+                logger.debug(f"Response status: {response.status_code}")
+                
+                # Handle rate limiting
+                if response.status_code == 429:
+                    logger.warning(f"Rate limited, waiting before retry...")
+                    time.sleep(5)  # Wait 5 seconds for rate limit
+                    continue
+                
+                # Check if the request was successful (status code 200)
+                response.raise_for_status()  # Raises an HTTPError for bad responses (4xx, 5xx)
+                if response.status_code == 200:
+                    return response  # Returning the whole response object if needed
+                else:
+                    logger.warning(f"Non-200 response: {response.status_code}")
+                    return None
+                    
+            except requests.exceptions.RequestException as e:
+                logger.error(f"Request failed (attempt {attempt + 1}): {e}")
+                if attempt == retries - 1:  # Last attempt
+                    return None
+                    
+        return None
 
 
 # Example usage
