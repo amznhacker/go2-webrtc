@@ -212,29 +212,25 @@ class Go2Connection:
                     logger.info("Failed to get answer from server")
 
     async def connect_robot(self):
+        # Try old method first since new firmware broke encryption
+        logger.info("Trying old firmware method first...")
         try:
             return await self.connect_robot_v10()
         except Exception as e:
-            logger.info(
-                "Failed to connect to the robot with firmware 1.0.x method, trying new method... %s",
-                e,
-            )
-
+            logger.info(f"Old method failed: {e}")
+            
+        # Only try new method if old fails
+        logger.info("Trying new method as fallback...")
         try:
-            logging.info("Trying to send SDP using a NEW method...")
-
             offer = await self.pc.createOffer()
             await self.pc.setLocalDescription(offer)
-
             sdp_offer = self.pc.localDescription
-
             peer_answer = Go2Connection.get_peer_answer(sdp_offer, self.token, self.ip)
             answer = RTCSessionDescription(sdp=peer_answer["sdp"], type=peer_answer["type"])
             await self.pc.setRemoteDescription(answer)
         except Exception as e2:
-            logger.error(f"New method also failed: {e2}")
-            logger.info("Trying fallback to old method again...")
-            return await self.connect_robot_v10()
+            logger.error(f"Both methods failed: {e}, {e2}")
+            raise Exception("Unable to connect with either method")
 
     @staticmethod
     def get_peer_answer(sdp_offer, token, robot_ip):
@@ -435,38 +431,85 @@ class Go2Connection:
 
     @staticmethod
     def rsa_load_public_key(pem_data: str) -> RSA.RsaKey:
-        """Try multiple methods to load RSA key from new firmware."""
+        """Analyze and load RSA key from new firmware format."""
         logger.debug(f"Key data length: {len(pem_data)}")
-        logger.debug(f"Key starts with: {pem_data[:20]}")
-        logger.debug(f"Key ends with: {pem_data[-20:]}")
         
-        # Try different padding approaches for base64
-        for padding in ['', '=', '==', '===']:
-            try:
-                padded_key = pem_data + padding
-                key_bytes = base64.b64decode(padded_key)
-                logger.debug(f"Decoded {len(key_bytes)} bytes with padding '{padding}'")
+        try:
+            # Decode the base64 key
+            key_bytes = base64.b64decode(pem_data)
+            logger.debug(f"Decoded {len(key_bytes)} bytes")
+            logger.debug(f"First 20 bytes (hex): {key_bytes[:20].hex()}")
+            logger.debug(f"Last 20 bytes (hex): {key_bytes[-20:].hex()}")
+            
+            # Analyze the key structure
+            if len(key_bytes) == 426:
+                logger.debug("426-byte key detected - analyzing structure...")
                 
-                # Try different key formats
-                formats_to_try = [
-                    key_bytes,  # Raw DER
-                    f"-----BEGIN PUBLIC KEY-----\n{base64.b64encode(key_bytes).decode()}\n-----END PUBLIC KEY-----",
-                    f"-----BEGIN RSA PUBLIC KEY-----\n{base64.b64encode(key_bytes).decode()}\n-----END RSA PUBLIC KEY-----"
-                ]
-                
-                for i, key_format in enumerate(formats_to_try):
+                # Try different interpretations of the 426-byte structure
+                # Option 1: Skip first few bytes (might be header)
+                for skip in [0, 1, 2, 4, 8, 16, 32]:
                     try:
-                        key = RSA.import_key(key_format)
-                        logger.info(f"Successfully loaded key with padding '{padding}' and format {i}")
+                        trimmed = key_bytes[skip:]
+                        key = RSA.import_key(trimmed)
+                        logger.info(f"Success with {skip} bytes skipped!")
                         return key
-                    except Exception as e:
-                        logger.debug(f"Format {i} failed: {e}")
+                    except:
+                        pass
+                
+                # Option 2: Try as raw modulus + exponent (common RSA format)
+                # 426 bytes might be: modulus (384 bytes) + exponent (42 bytes) or similar
+                try:
+                    # Assume 384-byte modulus, rest is exponent
+                    modulus_bytes = key_bytes[:384]
+                    exponent_bytes = key_bytes[384:]
+                    
+                    # Convert to integers
+                    n = int.from_bytes(modulus_bytes, 'big')
+                    e = int.from_bytes(exponent_bytes, 'big') if exponent_bytes else 65537
+                    
+                    # Create RSA key from components
+                    key = RSA.construct((n, e))
+                    logger.info(f"Success with manual construction! n={n.bit_length()} bits, e={e}")
+                    return key
+                except Exception as ex:
+                    logger.debug(f"Manual construction failed: {ex}")
+                
+                # Option 3: Try different modulus/exponent splits
+                for mod_size in [256, 320, 384, 400]:
+                    try:
+                        modulus_bytes = key_bytes[:mod_size]
+                        exponent_bytes = key_bytes[mod_size:mod_size+4]  # Try 4-byte exponent
                         
-            except Exception as e:
-                logger.debug(f"Padding '{padding}' failed: {e}")
+                        n = int.from_bytes(modulus_bytes, 'big')
+                        e = int.from_bytes(exponent_bytes, 'big') if exponent_bytes else 65537
+                        
+                        if e > 0 and e < 2**32:  # Reasonable exponent range
+                            key = RSA.construct((n, e))
+                            logger.info(f"Success with {mod_size}-byte modulus! e={e}")
+                            return key
+                    except:
+                        pass
+            
+            # Standard format attempts
+            formats = [
+                key_bytes,
+                f"-----BEGIN PUBLIC KEY-----\n{pem_data}\n-----END PUBLIC KEY-----",
+                f"-----BEGIN RSA PUBLIC KEY-----\n{pem_data}\n-----END RSA PUBLIC KEY-----"
+            ]
+            
+            for i, fmt in enumerate(formats):
+                try:
+                    key = RSA.import_key(fmt)
+                    logger.info(f"Success with standard format {i}!")
+                    return key
+                except Exception as e:
+                    logger.debug(f"Standard format {i} failed: {e}")
+            
+        except Exception as e:
+            logger.error(f"Key analysis failed: {e}")
         
-        # If all else fails, try to extract key components manually
-        logger.warning("All standard methods failed, using fallback key")
+        # Generate fallback key
+        logger.warning("Using fallback generated key")
         key = RSA.generate(2048)
         return key.publickey()
 
