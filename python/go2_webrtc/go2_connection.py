@@ -456,36 +456,47 @@ class Go2Connection:
                     except:
                         pass
                 
-                # Option 2: Try as raw modulus with standard exponent
+                # Option 2: Robot's key might be in DER format with custom structure
+                # Try interpreting as ASN.1 DER without standard headers
                 try:
-                    # Use first 384 bytes as modulus, standard exponent
-                    modulus_bytes = key_bytes[:384]
-                    n = int.from_bytes(modulus_bytes, 'big')
-                    e = 65537  # Standard RSA exponent
-                    
-                    # Create RSA key from components
-                    key = RSA.construct((n, e))
-                    logger.info(f"Success with standard exponent! n={n.bit_length()} bits, e={e}")
-                    return key
+                    # Look for RSA key pattern in the bytes
+                    # RSA keys often start with 0x30 (SEQUENCE) in DER format
+                    for offset in range(min(50, len(key_bytes))):
+                        try:
+                            test_key = key_bytes[offset:]
+                            if len(test_key) > 200:  # Reasonable key size
+                                key = RSA.import_key(test_key)
+                                logger.info(f"Success with DER offset {offset}! Key size: {key.size_in_bits()} bits")
+                                return key
+                        except:
+                            continue
                 except Exception as ex:
-                    logger.debug(f"Standard exponent failed: {ex}")
+                    logger.debug(f"DER parsing failed: {ex}")
                 
-                # Option 3: Try extracting actual exponent from end
+                # Option 3: Try the key as raw PKCS#1 RSAPublicKey format
                 try:
-                    # Assume 384-byte modulus, rest is exponent
-                    modulus_bytes = key_bytes[:384]
-                    exponent_bytes = key_bytes[384:]
+                    # Add PKCS#1 RSAPublicKey wrapper
+                    from Crypto.Util.asn1 import DerSequence, DerInteger
                     
-                    # Convert to integers
-                    n = int.from_bytes(modulus_bytes, 'big')
-                    e = int.from_bytes(exponent_bytes, 'big') if exponent_bytes else 65537
-                    
-                    # Create RSA key from components
-                    key = RSA.construct((n, e))
-                    logger.info(f"Success with extracted exponent! n={n.bit_length()} bits, e={e}")
-                    return key
+                    # Try to parse as raw modulus + exponent
+                    if len(key_bytes) >= 384:
+                        # Split into modulus and exponent parts
+                        modulus_bytes = key_bytes[:384]  # 3072 bits = 384 bytes
+                        exponent_bytes = key_bytes[384:388]  # Try 4-byte exponent first
+                        
+                        n = int.from_bytes(modulus_bytes, 'big')
+                        e = int.from_bytes(exponent_bytes, 'big') if len(exponent_bytes) > 0 else 65537
+                        
+                        # Ensure reasonable exponent
+                        if e == 0 or e > 2**32:
+                            e = 65537
+                        
+                        # Create proper RSA key
+                        key = RSA.construct((n, e))
+                        logger.info(f"Success with PKCS#1 format! n={n.bit_length()} bits, e={e}")
+                        return key
                 except Exception as ex:
-                    logger.debug(f"Extracted exponent failed: {ex}")
+                    logger.debug(f"PKCS#1 format failed: {ex}")
                 
                 # Option 4: Try different modulus/exponent splits
                 for mod_size in [256, 320, 384, 400]:
@@ -521,8 +532,22 @@ class Go2Connection:
         except Exception as e:
             logger.error(f"Key analysis failed: {e}")
         
-        # Generate fallback key
-        logger.warning("Using fallback generated key")
+        # Last resort: Use the robot's modulus with standard exponent
+        try:
+            key_bytes = base64.b64decode(pem_data)
+            if len(key_bytes) >= 256:
+                # Use first 256 bytes as 2048-bit modulus
+                modulus_bytes = key_bytes[:256]
+                n = int.from_bytes(modulus_bytes, 'big')
+                e = 65537
+                key = RSA.construct((n, e))
+                logger.warning(f"Using robot's modulus with standard exponent: {n.bit_length()} bits")
+                return key
+        except:
+            pass
+            
+        # Final fallback
+        logger.error("All key parsing methods failed, using generated key")
         key = RSA.generate(2048)
         return key.publickey()
 
