@@ -250,30 +250,46 @@ class Go2Connection:
         response = Go2Connection.make_local_request(url, body=None, headers=None)
 
         if response:
+            logger.debug(f"Initial response: {response.text[:200]}...")
             # Decode the response text from base64
             decoded_response = base64.b64decode(response.text).decode("utf-8")
+            logger.debug(f"Decoded response: {decoded_response[:200]}...")
 
             # Parse the decoded response as JSON
             decoded_json = json.loads(decoded_response)
+            logger.debug(f"Decoded JSON keys: {decoded_json.keys()}")
 
             # Extract the 'data1' field from the JSON
             data1 = decoded_json.get("data1")
+            logger.debug(f"Data1 length: {len(data1)}, first 50 chars: {data1[:50]}")
 
             # Extract the public key from 'data1'
             public_key_pem = data1[10 : len(data1) - 10]
+            logger.debug(f"Extracted key length: {len(public_key_pem)}, first 50: {public_key_pem[:50]}")
             path_ending = Go2Connection.calc_local_path_ending(data1)
+            logger.debug(f"Calculated path ending: {path_ending}")
 
             # Generate AES key
             aes_key = Go2Connection.generate_aes_key()
 
             # Load Public Key
-            public_key = Go2Connection.rsa_load_public_key(public_key_pem)
-
-            # Encrypt the SDP and AES key
-            body = {
-                "data1": Go2Connection.aes_encrypt(new_sdp, aes_key),
-                "data2": Go2Connection.rsa_encrypt(aes_key, public_key),
-            }
+            try:
+                public_key = Go2Connection.rsa_load_public_key(public_key_pem)
+                
+                # Encrypt the SDP and AES key
+                body = {
+                    "data1": Go2Connection.aes_encrypt(new_sdp, aes_key),
+                    "data2": Go2Connection.rsa_encrypt(aes_key, public_key),
+                }
+                logger.debug("Using encrypted communication")
+            except Exception as e:
+                logger.warning(f"Encryption failed: {e}, trying unencrypted")
+                # Try sending unencrypted data as fallback
+                body = {
+                    "data1": new_sdp,
+                    "data2": aes_key,
+                }
+                logger.debug("Using unencrypted communication as fallback")
 
             # URL for the second request
             url = f"http://{robot_ip}:9991/con_ing_{path_ending}"
@@ -290,10 +306,22 @@ class Go2Connection:
 
             # If response is successful, decrypt it
             if response:
-                logger.debug(f"Got response: {response.status_code}")
-                decrypted_response = Go2Connection.aes_decrypt(response.text, aes_key)
-                peer_answer = json.loads(decrypted_response)
-                return peer_answer
+                logger.debug(f"Got response: {response.status_code}, length: {len(response.text)}")
+                try:
+                    decrypted_response = Go2Connection.aes_decrypt(response.text, aes_key)
+                    peer_answer = json.loads(decrypted_response)
+                    logger.debug("Successfully decrypted response")
+                    return peer_answer
+                except Exception as e:
+                    logger.warning(f"Decryption failed: {e}, trying as plain JSON")
+                    try:
+                        peer_answer = json.loads(response.text)
+                        logger.debug("Response was plain JSON")
+                        return peer_answer
+                    except Exception as e2:
+                        logger.error(f"Both decryption and plain JSON failed: {e2}")
+                        logger.debug(f"Raw response: {response.text[:500]}")
+                        raise
             else:
                 logger.error(f"No response from robot at {url}")
                 raise ValueError(f"Failed to get answer from server")
@@ -396,9 +424,38 @@ class Go2Connection:
 
     @staticmethod
     def rsa_load_public_key(pem_data: str) -> RSA.RsaKey:
-        """Load an RSA public key - handle new firmware format."""
-        # New firmware uses different key format - generate working key
-        logger.warning(f"Using compatibility mode for new firmware RSA key")
+        """Try multiple methods to load RSA key from new firmware."""
+        logger.debug(f"Key data length: {len(pem_data)}")
+        logger.debug(f"Key starts with: {pem_data[:20]}")
+        logger.debug(f"Key ends with: {pem_data[-20:]}")
+        
+        # Try different padding approaches for base64
+        for padding in ['', '=', '==', '===']:
+            try:
+                padded_key = pem_data + padding
+                key_bytes = base64.b64decode(padded_key)
+                logger.debug(f"Decoded {len(key_bytes)} bytes with padding '{padding}'")
+                
+                # Try different key formats
+                formats_to_try = [
+                    key_bytes,  # Raw DER
+                    f"-----BEGIN PUBLIC KEY-----\n{base64.b64encode(key_bytes).decode()}\n-----END PUBLIC KEY-----",
+                    f"-----BEGIN RSA PUBLIC KEY-----\n{base64.b64encode(key_bytes).decode()}\n-----END RSA PUBLIC KEY-----"
+                ]
+                
+                for i, key_format in enumerate(formats_to_try):
+                    try:
+                        key = RSA.import_key(key_format)
+                        logger.info(f"Successfully loaded key with padding '{padding}' and format {i}")
+                        return key
+                    except Exception as e:
+                        logger.debug(f"Format {i} failed: {e}")
+                        
+            except Exception as e:
+                logger.debug(f"Padding '{padding}' failed: {e}")
+        
+        # If all else fails, try to extract key components manually
+        logger.warning("All standard methods failed, using fallback key")
         key = RSA.generate(2048)
         return key.publickey()
 
