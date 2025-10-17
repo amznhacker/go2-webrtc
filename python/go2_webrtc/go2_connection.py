@@ -220,16 +220,21 @@ class Go2Connection:
                 e,
             )
 
-        logging.info("Trying to send SDP using a NEW method...")
+        try:
+            logging.info("Trying to send SDP using a NEW method...")
 
-        offer = await self.pc.createOffer()
-        await self.pc.setLocalDescription(offer)
+            offer = await self.pc.createOffer()
+            await self.pc.setLocalDescription(offer)
 
-        sdp_offer = self.pc.localDescription
+            sdp_offer = self.pc.localDescription
 
-        peer_answer = Go2Connection.get_peer_answer(sdp_offer, self.token, self.ip)
-        answer = RTCSessionDescription(sdp=peer_answer["sdp"], type=peer_answer["type"])
-        await self.pc.setRemoteDescription(answer)
+            peer_answer = Go2Connection.get_peer_answer(sdp_offer, self.token, self.ip)
+            answer = RTCSessionDescription(sdp=peer_answer["sdp"], type=peer_answer["type"])
+            await self.pc.setRemoteDescription(answer)
+        except Exception as e2:
+            logger.error(f"New method also failed: {e2}")
+            logger.info("Trying fallback to old method again...")
+            return await self.connect_robot_v10()
 
     @staticmethod
     def get_peer_answer(sdp_offer, token, robot_ip):
