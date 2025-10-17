@@ -456,8 +456,21 @@ class Go2Connection:
                     except:
                         pass
                 
-                # Option 2: Try as raw modulus + exponent (common RSA format)
-                # 426 bytes might be: modulus (384 bytes) + exponent (42 bytes) or similar
+                # Option 2: Try as raw modulus with standard exponent
+                try:
+                    # Use first 384 bytes as modulus, standard exponent
+                    modulus_bytes = key_bytes[:384]
+                    n = int.from_bytes(modulus_bytes, 'big')
+                    e = 65537  # Standard RSA exponent
+                    
+                    # Create RSA key from components
+                    key = RSA.construct((n, e))
+                    logger.info(f"Success with standard exponent! n={n.bit_length()} bits, e={e}")
+                    return key
+                except Exception as ex:
+                    logger.debug(f"Standard exponent failed: {ex}")
+                
+                # Option 3: Try extracting actual exponent from end
                 try:
                     # Assume 384-byte modulus, rest is exponent
                     modulus_bytes = key_bytes[:384]
@@ -469,12 +482,12 @@ class Go2Connection:
                     
                     # Create RSA key from components
                     key = RSA.construct((n, e))
-                    logger.info(f"Success with manual construction! n={n.bit_length()} bits, e={e}")
+                    logger.info(f"Success with extracted exponent! n={n.bit_length()} bits, e={e}")
                     return key
                 except Exception as ex:
-                    logger.debug(f"Manual construction failed: {ex}")
+                    logger.debug(f"Extracted exponent failed: {ex}")
                 
-                # Option 3: Try different modulus/exponent splits
+                # Option 4: Try different modulus/exponent splits
                 for mod_size in [256, 320, 384, 400]:
                     try:
                         modulus_bytes = key_bytes[:mod_size]
